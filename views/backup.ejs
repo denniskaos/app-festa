@@ -1,10 +1,47 @@
-<section class="card">
-  <h1>Backup & Export</h1>
-  <p><a class="btn" href="/export/db">Download base de dados (.db)</a></p>
-  <h3>Export CSV</h3>
-  <ul>
-    <% ['events','orcamento','movimentos','patrocinadores','jantares','jantar_inscritos','settings','casais'].forEach(t => { %>
-      <li><a href="/export/<%= t %>.csv"><%= t %>.csv</a></li>
-    <% }) %>
-  </ul>
-</section>
+<div class="toolbar">
+  <h1>Backup</h1>
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <p>Exportações completas:</p>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <a class="btn" href="/backup/export.json">Exportar JSON</a>
+    <a class="btn btn-primary" href="/backup/export.sql">Exportar SQL</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <h3>CSV por módulo</h3>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <a class="btn" href="/backup/export/movimentos.csv">Movimentos</a>
+    <a class="btn" href="/backup/export/jantares.csv">Jantares</a>
+    <a class="btn" href="/backup/export/orcamento.csv">Orçamento</a>
+    <a class="btn" href="/backup/export/patrocinadores.csv">Patrocinadores</a>
+    <a class="btn" href="/backup/export/peditorios.csv">Peditórios</a>
+    <a class="btn" href="/backup/export/casais.csv">Casais</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <h3>Formatos avançados</h3>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <a class="btn btn-primary" href="/backup/export.xlsx">Exportar Excel (com logo)</a>
+    <a class="btn" href="/backup/export/all-csv.zip">ZIP com CSVs + logo</a>
+  </div>
+</div>
+
+
+<div class="card">
+  <h3>Tabelas incluídas (JSON/SQL)</h3>
+  <table class="table">
+    <thead><tr><th>Tabela</th><th>Registos</th></tr></thead>
+    <tbody>
+      <% tables.forEach(t => { %>
+        <tr>
+          <td><code><%= t.name %></code></td>
+          <td><%= counts[t.name] %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

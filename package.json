@@ -13,6 +13,7 @@
     "node": "20.x"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^9.6.0",
     "compression": "^1.8.1",
@@ -20,6 +21,7 @@
     "csv-parse": "^5.6.0",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.17.3",
