@@ -1,0 +1,89 @@
+:root{
+  --radius: 14px;
+  --gap: 12px;
+  --shadow: 0 8px 30px rgba(0,0,0,.06);
+}
+
+/* Base */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;line-height:1.35}
+main,.container{max-width:1100px;margin:0 auto;padding:12px}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 16px}
+.toolbar h1{margin:0;font-size:clamp(20px,3.2vw,28px)}
+
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.card.stat{padding:14px 16px}
+.stat-label{font-size:12px;color:#666}
+.stat-number{font-size:22px;font-weight:700}
+
+/* Botões */
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;border:0;background:#1f6feb;color:#fff;text-decoration:none;cursor:pointer;min-height:44px}
+.btn:hover{filter:brightness(.95)}
+.btn-light{background:#eef2f7;color:#111}
+.btn-danger{background:#d32f2f;color:#fff}
+.btn-primary{background:#0b7;}
+
+/* Tabelas (desktop) */
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:10px 12px;border-bottom:1px solid #e8eaef;vertical-align:top}
+.table thead th{font-weight:700;text-align:left;background:#fafbfc;position:sticky;top:0}
+.table tfoot th,.table tfoot td{background:#fafbfc;font-weight:700}
+
+/* Formulários */
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid #dfe3eb;border-radius:10px;background:#fff;min-height:44px}
+label{display:block;margin:8px 0}
+
+/* ------ Mobile: tabela vira “cartões” empilhados ------ */
+@media (max-width: 640px){
+  main,.container{padding:10px}
+  .table thead{display:none}
+  .table tfoot{display:none}
+  .table tr{display:block;padding:8px 6px;border:1px solid #e8eaef;border-radius:12px;margin:10px 0;background:#fff;box-shadow:var(--shadow)}
+  .table td{display:flex;gap:8px;justify-content:space-between;padding:8px 10px;border:0}
+  .table td::before{content:attr(data-label);font-weight:600;color:#555;flex:1}
+  .table td > *{text-align:right}
+  .toolbar{gap:8px}
+  .btn{width:auto}
+}
+
+/* Utilitários */
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2f7;color:#111;font-size:12px}
+.muted{color:#888}
+
+/* Topbar fixa e acima do overlay */
+.topbar{background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.06); position:sticky; top:0; z-index:1300;}
+.topbar-inner{display:flex; align-items:center; gap:12px; padding:10px 0;}
+.brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;}
+.brand-logo{height:40px; width:auto;}
+
+/* Navegação (desktop) */
+.nav{display:flex; align-items:center; gap:12px; margin-left:auto; flex-wrap:nowrap;}
+.nav a{text-decoration:none; color:#111; padding:8px 10px; border-radius:10px;}
+.nav-logout{margin-left:8px;}
+.nav-logout .btn{min-height:36px}
+
+/* Botão hambúrguer: escondido no desktop */
+.nav-toggle{display:none; margin-left:auto; min-height:40px; padding:8px 12px;}
+
+/* Mobile / tablets: menu deslizante do lado direito */
+@media (max-width: 899px){
+  .nav-toggle{display:inline-flex;}
+  .nav{
+    position:fixed; top:64px; right:0; bottom:0; width:280px;
+    background:#fff; padding:12px; box-shadow:0 8px 30px rgba(0,0,0,.15);
+    transform:translateX(110%); transition:transform .2s ease; z-index:1200;
+    display:flex; flex-direction:column; align-items:stretch; gap:8px;
+  }
+  .nav.open{ transform:translateX(0); }
+  .nav a{padding:12px 10px;}
+  .nav-logout{margin-left:0;}
+}
+
+/* Garante que nada fica por baixo do overlay */
+main.page{position:relative; z-index:1;}
+

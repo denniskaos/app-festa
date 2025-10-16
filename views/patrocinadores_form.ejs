@@ -1,0 +1,44 @@
+<div class="toolbar">
+  <h1><%= p ? 'Editar Patrocinador' : 'Novo Patrocinador' %></h1>
+</div>
+
+<section class="card">
+  <form method="post" action="<%= p ? '/patrocinadores/' + p.id : '/patrocinadores' %>" class="form-grid">
+    <label>Nome
+      <input type="text" name="name" value="<%= p ? p.name : '' %>" required />
+    </label>
+
+    <label>Contacto
+      <input type="text" name="contacto" value="<%= p ? (p.contacto || '') : '' %>" />
+    </label>
+
+    <label>Tipo de patrocínio
+      <!-- datalist = opções pré-definidas mas permite escrever novos tipos -->
+      <input list="tipos-patrocinio" name="tipo" value="<%= p ? (p.tipo || '') : '' %>" placeholder="Lona, Lona + Rádio, Rádio…" />
+      <datalist id="tipos-patrocinio">
+        <% (tiposPatrocinio || []).forEach(t => { %>
+          <option value="<%= t %>"></option>
+        <% }) %>
+      </datalist>
+    </label>
+
+    <label>Valor prometido (€)
+      <input type="number" step="0.01" name="valor_prometido" value="<%= p ? (p.valor_prometido_cents/100).toFixed(2) : '' %>" />
+    </label>
+
+    <label>Valor entregue (€)
+      <input type="number" step="0.01" name="valor_entregue" value="<%= p ? (p.valor_entregue_cents/100).toFixed(2) : '' %>" />
+    </label>
+
+    <label style="grid-column:1/-1">Observações
+      <input type="text" name="observ" value="<%= p ? (p.observ || '') : '' %>" />
+    </label>
+
+    <button class="btn"><%= p ? 'Guardar' : 'Criar' %></button>
+  </form>
+
+  <p class="muted" style="margin-top:.5rem">
+    Tipos pré-definidos: <code>Lona</code>, <code>Lona + Rádio</code>, <code>Rádio</code>.  
+    Podes também escrever um **novo tipo** diretamente no campo.
+  </p>
+</section>

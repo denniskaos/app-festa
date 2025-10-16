@@ -1,0 +1,18 @@
+<div class="toolbar">
+  <h1>Vendas</h1>
+  <a class="btn" href="/vendas/new">Nova Venda</a>
+</div>
+<table class="table">
+  <thead><tr><th>#</th><th>Data</th><th>Total</th><th></th></tr></thead>
+  <tbody>
+  <% if (!vendas.length) { %><tr><td colspan="4" class="muted">Sem vendas.</td></tr><% } %>
+  <% vendas.forEach(v => { %>
+    <tr>
+      <td><%= v.id %></td>
+      <td><%= v.created_at %></td>
+      <td>€ <%= euros(v.total_cents) %></td>
+      <td><a class="btn btn-light" href="/vendas/<%= v.id %>">Ver</a></td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>

@@ -1,0 +1,22 @@
+<!-- C:\Users\Danie\Documents\Festa\views\events_form.ejs -->
+<h1><%= event ? 'Editar' : 'Novo' %> Evento</h1>
+
+<form method="post" action="<%= event ? '/events/' + event.id : '/events' %>" class="form-grid">
+  <label>Data
+    <input required type="date" name="data" value="<%= event?.data || '' %>" />
+  </label>
+  <label>Hora
+    <input type="time" name="hora" value="<%= event?.hora || '' %>" />
+  </label>
+  <label>Título
+    <input required type="text" name="titulo" value="<%= event?.titulo || '' %>" />
+  </label>
+  <label>Local
+    <input type="text" name="local" value="<%= event?.local || '' %>" />
+  </label>
+  <label style="grid-column:1/-1">Descrição
+    <textarea name="description" rows="4"><%= event?.description || '' %></textarea>
+  </label>
+  <button class="btn">Gravar</button>
+  <a class="btn btn-light" href="/events">Cancelar</a>
+</form>

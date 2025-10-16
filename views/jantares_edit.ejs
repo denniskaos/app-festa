@@ -1,0 +1,9 @@
+<h1>Editar Jantar</h1>
+<form method="post" action="/jantares/<%= j.id %>" class="card" style="padding:12px">
+  <label>Data <input name="dt" type="date" value="<%= j.dt %>"></label><br>
+  <label>Pessoas <input name="pessoas" type="number" min="0" step="1" value="<%= j.pessoas %>"></label><br>
+  <label>Valor por pessoa (€) <input name="valor_pessoa" type="text" value="<%= euros(j.valor_pessoa_cents) %>"></label><br>
+  <label>Despesas (€) <input name="despesas" type="text" value="<%= euros(j.despesas_cents) %>"></label><br>
+  <button class="btn">Guardar</button>
+  <a class="btn btn-light" href="/jantares">Cancelar</a>
+</form>

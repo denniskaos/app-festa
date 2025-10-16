@@ -1,0 +1,41 @@
+<div class="toolbar">
+  <h1>Painel</h1>
+</div>
+
+<div class="cards">
+  <div class="card stat">
+    <div class="stat-number">€ <%= (sumRec/100).toFixed(2) %></div>
+    <div class="stat-label">Receitas (movimentos)</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (sumDesp/100).toFixed(2) %></div>
+    <div class="stat-label">Despesas (movimentos)</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (saldoMov/100).toFixed(2) %></div>
+    <div class="stat-label">Saldo (movimentos)</div>
+  </div>
+
+  <div class="card stat">
+    <div class="stat-number">€ <%= (totalPatrocinadores/100).toFixed(2) %></div>
+    <div class="stat-label">Patrocinadores</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (totalPeditorios/100).toFixed(2) %></div>
+    <div class="stat-label">Peditórios</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number"><strong>€ <%= (saldoFinal/100).toFixed(2) %></strong></div>
+    <div class="stat-label"><strong>Saldo Final</strong></div>
+  </div>
+
+  <div class="card stat">
+    <div class="stat-number">€ <%= (orcamentoTotal/100).toFixed(2) %></div>
+    <div class="stat-label">Orçamento (serviços)</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (totalCasa/100).toFixed(2) %></div>
+    <div class="stat-label">Em casa (casais)</div>
+  </div>
+</div>
+

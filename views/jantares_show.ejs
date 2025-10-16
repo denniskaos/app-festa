@@ -1,0 +1,70 @@
+<!-- views/jantares_show.ejs — sem inscrições -->
+<h1><%= j.title %></h1>
+<p class="muted">
+  Dia: <strong><%= j.dt %></strong>
+  • Preço por pessoa: <strong>€ <%= (j.price_cents/100).toFixed(2) %></strong>
+  <% if (j.location) { %> • Local: <%= j.location %> <% } %>
+</p>
+
+<div class="cards">
+  <div class="card stat">
+    <div class="stat-number"><%= j.pessoas || 0 %></div>
+    <div class="stat-label">Pessoas</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= ((j.pessoas||0) * (j.price_cents/100)).toFixed(2) %></div>
+    <div class="stat-label">Receita (pessoas × preço)</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (custo/100).toFixed(2) %></div>
+    <div class="stat-label">Custo (despesas)</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (lucro/100).toFixed(2) %></div>
+    <div class="stat-label">Lucro</div>
+  </div>
+</div>
+
+<% if (capacidadeRestante != null) { %>
+  <p class="muted">Lugares restantes: <strong><%= capacidadeRestante %></strong></p>
+<% } %>
+
+<section class="card">
+  <h3>Atualizar número de pessoas</h3>
+  <form method="post" action="/jantares/<%= j.id %>/pessoas" class="form-grid">
+    <label>Pessoas
+      <input type="number" name="pessoas" min="0" required value="<%= j.pessoas || 0 %>" />
+    </label>
+    <button class="btn">Guardar</button>
+  </form>
+</section>
+
+<section class="card">
+  <h3>Adicionar Despesa</h3>
+  <form method="post" action="/jantares/<%= j.id %>/despesas" class="form-grid">
+    <label>Data <input type="date" name="dt" required /></label>
+    <label>Descrição <input type="text" name="descr" required /></label>
+    <label>Valor (€) <input type="number" step="0.01" name="valor" required /></label>
+    <button class="btn">Adicionar</button>
+  </form>
+</section>
+
+<table class="table">
+  <thead><tr><th>#</th><th>Data</th><th>Descrição</th><th>Valor</th><th></th></tr></thead>
+  <tbody>
+  <% if (!despesas.length) { %><tr><td colspan="5" class="muted">Sem despesas.</td></tr><% } %>
+  <% despesas.forEach(d => { %>
+    <tr>
+      <td><%= d.id %></td>
+      <td><%= d.dt %></td>
+      <td><%= d.descr || '' %></td>
+      <td>€ <%= (d.valor_cents/100).toFixed(2) %></td>
+      <td>
+        <form method="post" action="/jantares/<%= j.id %>/despesas/<%= d.id %>/delete" onsubmit="return confirm('Apagar despesa?')">
+          <button class="btn btn-danger">Apagar</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>

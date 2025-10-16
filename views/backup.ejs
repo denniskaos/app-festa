@@ -1,0 +1,10 @@
+<section class="card">
+  <h1>Backup & Export</h1>
+  <p><a class="btn" href="/export/db">Download base de dados (.db)</a></p>
+  <h3>Export CSV</h3>
+  <ul>
+    <% ['events','orcamento','movimentos','patrocinadores','jantares','jantar_inscritos','settings','casais'].forEach(t => { %>
+      <li><a href="/export/<%= t %>.csv"><%= t %>.csv</a></li>
+    <% }) %>
+  </ul>
+</section>

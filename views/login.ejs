@@ -1,0 +1,10 @@
+<section class="card">
+  <h1>Entrar</h1>
+  <% if (error) { %><div class="alert"><%= error %></div><% } %>
+  <form method="post" action="/login" class="form-grid">
+    <label>Email <input required type="email" name="email" placeholder="admin@local" /></label>
+    <label>Password <input required type="password" name="password" placeholder="••••••••" /></label>
+    <button class="btn">Entrar</button>
+  </form>
+  <p class="mt">Ainda não tens conta? <a href="/registar">Criar conta</a></p>
+</section>

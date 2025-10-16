@@ -1,0 +1,29 @@
+<section class="card">
+  <h1>Movimentos de Stock</h1>
+  <form method="post" action="/stock" class="form-grid">
+    <label>Produto
+      <select name="product_id" required>
+        <% produtos.forEach(p => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
+      </select>
+    </label>
+    <label>Quantidade <input required type="number" name="qty" value="1" /></label>
+    <label>Tipo
+      <select name="type">
+        <option value="in">Entrada</option>
+        <option value="out">Saída</option>
+        <option value="adjust">Ajuste</option>
+      </select>
+    </label>
+    <label>Nota <input type="text" name="note" /></label>
+    <button class="btn">Registar</button>
+  </form>
+</section>
+<table class="table mt">
+  <thead><tr><th>ID</th><th>Data</th><th>Produto</th><th>Qtd</th><th>Tipo</th><th>Nota</th></tr></thead>
+  <tbody>
+  <% if (!movs.length) { %><tr><td colspan="6" class="muted">Sem movimentos.</td></tr><% } %>
+  <% movs.forEach(m => { %>
+    <tr><td><%= m.id %></td><td><%= m.created_at %></td><td><%= m.product %></td><td><%= m.qty %></td><td><%= m.type %></td><td><%= m.note || '' %></td></tr>
+  <% }) %>
+  </tbody>
+</table>

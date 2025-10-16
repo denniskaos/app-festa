@@ -1,0 +1,63 @@
+<div class="toolbar">
+  <h1>Distribuição por € <%= (bloco/100).toFixed(2) %> (rodízio)</h1>
+  <a class="btn btn-light" style="margin-left:auto" href="/casais">Voltar</a>
+</div>
+
+<p style="margin:8px 0 12px">
+  Blocos completos: <strong><%= (typeof blocosTotais !== 'undefined' ? blocosTotais : 0) %></strong>
+  × € <%= (bloco/100).toFixed(2) %>
+  &nbsp;–&nbsp; Resto: € <%= euros(typeof resto !== 'undefined' ? resto : 0) %>
+  <% if (typeof novosBlocos !== 'undefined') { %>
+    &nbsp;–&nbsp; Novos blocos por aplicar: <strong><%= novosBlocos %></strong>
+  <% } %>
+</p>
+
+<div class="card" style="padding:12px; margin-bottom:12px;">
+  <div style="display:flex; gap:12px; align-items:center; width:100%;">
+    <!-- Definir início do rodízio -->
+    <form method="post" action="/casais/rodizio/inicio" style="display:flex; gap:12px; align-items:center;">
+      <label style="margin:0">Início da sequência:
+        <select name="casal_id">
+          <option value="">(primeiro da lista)</option>
+          <% (linhas || []).forEach(function(l){ %>
+            <option value="<%= l.id %>" <%= (inicioId && inicioId===l.id) ? 'selected' : '' %>>
+              <%= l.nome %>
+            </option>
+          <% }); %>
+        </select>
+      </label>
+      <button class="btn">Definir início</button>
+    </form>
+
+    <!-- Aplicar distribuição -->
+    <form method="post" action="/casais/rodizio/aplicar" style="margin-left:auto">
+      <button class="btn btn-primary" type="submit">Aplicar distribuição</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>#</th><th>Casal</th><th>Atual (€)</th><th>Alvo (€)</th></tr>
+    </thead>
+    <tbody>
+      <% if (!linhas || !linhas.length) { %>
+        <tr><td colspan="4" class="muted">Sem casais.</td></tr>
+      <% } %>
+      <% (linhas || []).forEach(function(l, i){ %>
+        <tr>
+          <td><%= i+1 %></td>
+          <td><%= l.nome %></td>
+          <td>€ <%= euros(l.atual || 0) %></td>
+          <td>
+            € <%= euros(l.alvo || 0) %>
+            <% if ((l.novos_blocks || 0) > 0) { %>
+              <span class="badge" style="margin-left:6px">+<%= l.novos_blocks %> bloco(s)</span>
+            <% } %>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

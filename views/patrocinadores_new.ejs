@@ -1,0 +1,14 @@
+<div class="toolbar">
+  <h1>Novo Patrocinador</h1>
+</div>
+
+<form method="post" action="/patrocinadores" class="card" style="padding:12px">
+  <label>Nome <input name="name" required></label><br>
+  <label>Contacto <input name="contacto"></label><br>
+  <label>Tipo <input name="tipo" placeholder="Ex.: Ouro, Prata, Bronze"></label><br>
+  <label>Valor Prometido (€) <input name="valor_prometido" type="text" placeholder="ex.: 150,00"></label><br>
+  <label>Valor Entregue (€) <input name="valor_entregue" type="text" placeholder="ex.: 100,00"></label><br>
+  <label>Observações <textarea name="observ"></textarea></label><br>
+  <button class="btn">Guardar</button>
+  <a class="btn btn-light" href="/patrocinadores">Cancelar</a>
+</form>

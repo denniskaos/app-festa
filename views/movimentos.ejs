@@ -1,0 +1,72 @@
+<!-- views/movimentos.ejs -->
+<div class="toolbar"><h1>Movimentos</h1></div>
+
+<section class="card">
+  <form method="post" action="/movimentos" class="form-grid">
+    <label>Data
+      <input type="date" name="dt" required />
+    </label>
+
+    <label>Tipo
+      <select name="type" required>
+        <option value="receita">Receita</option>
+        <option value="despesa">Despesa</option>
+      </select>
+    </label>
+
+    <label>Descrição
+      <input type="text" name="descr" />
+    </label>
+
+    <label>Valor (€)
+      <input type="number" step="0.01" name="valor" required />
+    </label>
+
+    <button class="btn">Adicionar</button>
+  </form>
+</section>
+
+<table class="table mt">
+  <thead>
+    <tr>
+      <th>Data</th>
+      <th>Tipo</th>
+      <th>Descrição</th>
+      <th>Valor</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  <% if (!movs.length) { %>
+    <tr><td colspan="5" class="muted">Sem movimentos.</td></tr>
+  <% } %>
+  <% movs.forEach(m => { %>
+    <tr>
+      <td><%= m.dt %></td>
+      <td><%= m.type %></td>
+      <td><%= m.descr || '' %></td>
+      <td>€ <%= (m.valor_cents/100).toFixed(2) %></td>
+      <td class="actions">
+        <a class="btn btn-light" href="/movimentos/<%= m.id %>/edit">Editar</a>
+        <form method="post" action="/movimentos/<%= m.id %>/delete" onsubmit="return confirm('Apagar?')">
+          <button class="btn btn-danger">Apagar</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="3" style="text-align:right">Total Receitas</th>
+      <th colspan="2">€ <%= (sumRec/100).toFixed(2) %></th>
+    </tr>
+    <tr>
+      <th colspan="3" style="text-align:right">Total Despesas</th>
+      <th colspan="2">€ <%= (sumDesp/100).toFixed(2) %></th>
+    </tr>
+    <tr>
+      <th colspan="3" style="text-align:right">Saldo</th>
+      <th colspan="2">€ <%= ((sumRec - sumDesp)/100).toFixed(2) %></th>
+    </tr>
+  </tfoot>
+</table>

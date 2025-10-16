@@ -1,0 +1,24 @@
+<div class="toolbar">
+  <h1>Produtos</h1>
+  <a class="btn" href="/produtos/new">Novo Produto</a>
+</div>
+<table class="table">
+  <thead><tr><th>Nome</th><th>Preço</th><th>Unidade</th><th>Ativo</th><th></th></tr></thead>
+  <tbody>
+  <% if (!produtos.length) { %><tr><td colspan="5" class="muted">Sem produtos.</td></tr><% } %>
+  <% produtos.forEach(p => { %>
+    <tr>
+      <td><%= p.name %></td>
+      <td>€ <%= euros(p.price_cents) %></td>
+      <td><%= p.unit %></td>
+      <td><%= p.active ? 'Sim' : 'Não' %></td>
+      <td class="actions">
+        <a class="btn btn-light" href="/produtos/<%= p.id %>/edit">Editar</a>
+        <form method="post" action="/produtos/<%= p.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar?')">
+          <button class="btn btn-danger">Apagar</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>

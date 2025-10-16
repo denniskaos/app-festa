@@ -1,0 +1,39 @@
+<div class="toolbar">
+  <h1>Jantares</h1>
+  <a class="btn" style="margin-left:auto" href="/jantares/new">Novo</a>
+</div>
+
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat"><div class="stat-label">Receita</div><div class="stat-number">€ <%= euros(totalReceita) %></div></div>
+  <div class="card stat"><div class="stat-label">Despesas</div><div class="stat-number">€ <%= euros(totalDespesas) %></div></div>
+  <div class="card stat"><div class="stat-label">Lucro</div><div class="stat-number">€ <%= euros(totalLucro) %></div></div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Data</th><th>Pessoas</th><th>€/pessoa</th><th>Receita</th><th>Despesas</th><th>Lucro</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% if (!jantares.length) { %>
+        <tr><td colspan="7" class="muted">Sem jantares.</td></tr>
+      <% } %>
+      <% for (const j of jantares) { %>
+        <tr>
+          <td><%= j.dt || '' %></td>
+          <td><%= j.pessoas %></td>
+          <td>€ <%= euros(j.valor_pessoa_cents) %></td>
+          <td>€ <%= euros(j.receita_cents) %></td>
+          <td>€ <%= euros(j.despesas_cents) %></td>
+          <td>€ <%= euros(j.lucro_cents) %></td>
+          <td>
+            <a class="btn btn-light" href="/jantares/<%= j.id %>/edit">Editar</a>
+            <form method="post" action="/jantares/<%= j.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar este jantar?')">
+              <button class="btn btn-danger">Apagar</button>
+            </form>
+          </td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,62 @@
+<<div class="toolbar"><h1>Cronograma</h1></div>
+
+<% if (imported) { %>
+  <div class="alert success">Importados: <strong><%= imported %></strong></div>
+<% } %>
+<% if (error) { %>
+  <div class="alert">Erro: <%= error %></div>
+<% } %>
+
+<section class="card">
+  <h3>Novo evento</h3>
+  <form method="post" action="/events" class="form-grid">
+    <label>Data <input type="date" name="dt" /></label>
+    <label style="grid-column:1/-1">Descrição
+      <input type="text" name="title" required placeholder="Ex.: Divulgação da Feira" />
+    </label>
+    <button class="btn">Adicionar</button>
+  </form>
+</section>
+
+<div class="card">
+  <h2>Eventos</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:140px">Data</th>
+          <th>Descrição</th>
+          <th style="width:260px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!events || !events.length) { %>
+          <tr><td colspan="3" class="muted">Sem eventos.</td></tr>
+        <% } %>
+        <% (events || []).forEach(e => { %>
+          <tr class="<%= e.done ? 'row-done' : '' %>">
+            <td><input form="f<%= e.id %>" type="date" name="dt" value="<%= e.dt || '' %>"></td>
+            <td><input form="f<%= e.id %>" type="text" name="title" value="<%= e.title %>" required></td>
+            <td class="actions">
+              <form id="f<%= e.id %>" method="post" action="/events/<%= e.id %>"></form>
+              <button form="f<%= e.id %>" class="btn btn-light">Guardar</button>
+              <form method="post" action="/events/<%= e.id %>/done" style="display:inline">
+                <button class="btn"><%= e.done ? 'Desmarcar' : 'Marcar efetuado' %></button>
+              </form>
+              <form method="post" action="/events/<%= e.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar?')">
+                <button class="btn btn-danger">Apagar</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .row-done input { text-decoration: line-through; color:#777; }
+  .table-wrap { width:100%; overflow-x:auto; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+</style>
+

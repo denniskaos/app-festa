@@ -1,0 +1,48 @@
+<!-- views/jantares_form.ejs — sem inscrições -->
+<h1><%= j ? 'Editar' : 'Novo' %> Jantar</h1>
+
+<form method="post" action="<%= j ? '/jantares/' + j.id : '/jantares' %>" class="form-grid">
+  <label>Título
+    <input required type="text" name="title" value="<%= j?.title || '' %>" />
+  </label>
+
+  <label>Dia do jantar (YYYY-MM-DD HH:MM)
+    <input required type="text" name="dt" placeholder="2026-08-15 20:00" value="<%= j?.dt || '' %>" />
+  </label>
+
+  <label>Valor do jantar (€ por pessoa)
+    <input required type="number" step="0.01" name="price" value="<%= j ? (j.price_cents/100).toFixed(2) : '' %>" />
+  </label>
+
+  <label>Quantidade total de pessoas
+    <input required type="number" min="0" name="pessoas" value="<%= j?.pessoas ?? 0 %>" />
+  </label>
+
+  <label>Local
+    <input type="text" name="location" value="<%= j?.location || '' %>" />
+  </label>
+
+  <label>Capacidade
+    <input type="number" name="capacity" value="<%= j?.capacity ?? '' %>" />
+  </label>
+
+  <label style="grid-column:1/-1">Notas
+    <textarea name="notes" rows="3"><%= j?.notes || '' %></textarea>
+  </label>
+
+  <% if (!j) { %>
+  <div style="grid-column:1/-1" class="muted"><strong>Despesa inicial (opcional)</strong></div>
+  <label>Data da despesa
+    <input type="date" name="init_dep_dt" />
+  </label>
+  <label>Descrição da despesa
+    <input type="text" name="init_dep_descr" />
+  </label>
+  <label>Valor da despesa (€)
+    <input type="number" step="0.01" name="init_dep_valor" />
+  </label>
+  <% } %>
+
+  <button class="btn"><%= j ? 'Guardar' : 'Criar Jantar' %></button>
+  <a class="btn btn-light" href="/jantares">Cancelar</a>
+</form>

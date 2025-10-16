@@ -1,0 +1,37 @@
+<div class="toolbar">
+  <h1>Casais</h1>
+  <a class="btn" style="margin-left:auto" href="/casais/new">Novo</a>
+  <a class="btn btn-light" href="/casais/rodizio" style="margin-left:8px">Rodízio</a>
+</div>
+
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Total</div>
+    <div class="stat-number">€ <%= euros(total) %></div>
+  </div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Nome</th><th>Valor (€)</th><th style="width:180px">Ações</th></tr>
+    </thead>
+    <tbody>
+      <% if (!casais || !casais.length) { %>
+        <tr><td colspan="3" class="muted">Sem casais.</td></tr>
+      <% } %>
+      <% (casais || []).forEach(c => { %>
+        <tr>
+          <td><%= c.nome %></td>
+          <td>€ <%= euros(c.valor_casa_cents || 0) %></td>
+          <td>
+            <a class="btn btn-light" href="/casais/<%= c.id %>/edit">Editar</a>
+            <form method="post" action="/casais/<%= c.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar este casal?')">
+              <button class="btn btn-danger">Apagar</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

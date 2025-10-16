@@ -1,0 +1,55 @@
+<div class="toolbar">
+  <h1>Utilizadores</h1>
+</div>
+
+<section class="card">
+  <h3>Novo utilizador</h3>
+  <form method="post" action="/utilizadores" class="form-grid">
+    <label>Nome <input name="name" required></label>
+    <label>Email <input type="email" name="email" required></label>
+    <label>Password inicial <input type="password" name="password" placeholder="(default 123456)"></label>
+    <label>Role
+      <select name="role">
+        <option value="viewer">viewer (só leitura)</option>
+        <option value="financeiro">financeiro</option>
+        <option value="admin">admin</option>
+      </select>
+    </label>
+    <button class="btn">Criar</button>
+  </form>
+</section>
+
+<div class="card">
+  <h3>Lista</h3>
+  <table class="table">
+    <thead><tr><th>#</th><th>Nome</th><th>Email</th><th>Role</th><th style="width:360px">Ações</th></tr></thead>
+    <tbody>
+      <% users.forEach(u => { %>
+      <tr>
+        <td><%= u.id %></td>
+        <td><%= u.name %></td>
+        <td><%= u.email %></td>
+        <td>
+          <form method="post" action="/utilizadores/<%= u.id %>/role" style="display:flex; gap:8px;">
+            <select name="role">
+              <% ROLES.forEach(r => { %>
+                <option value="<%= r %>" <%= u.role===r?'selected':'' %>><%= r %></option>
+              <% }) %>
+            </select>
+            <button class="btn btn-light">Guardar role</button>
+          </form>
+        </td>
+        <td class="actions">
+          <form method="post" action="/utilizadores/<%= u.id %>/reset" style="display:inline-flex; gap:8px; align-items:center;">
+            <input type="password" name="password" placeholder="Nova password" />
+            <button class="btn">Reset password</button>
+          </form>
+          <form method="post" action="/utilizadores/<%= u.id %>/delete" style="display:inline" onsubmit="return confirm('Eliminar utilizador?')">
+            <button class="btn btn-danger">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

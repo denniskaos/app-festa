@@ -1,0 +1,14 @@
+<section class="card">
+  <h1>Criar conta</h1>
+  <% if (error) { %><div class="alert"><%= error %></div><% } %>
+
+  <form method="post" action="/registar" class="form-grid">
+    <label>Nome <input name="name" required /></label>
+    <label>Email <input type="email" name="email" required /></label>
+    <label>Password <input type="password" name="password" required /></label>
+    <label>Confirmar password <input type="password" name="confirm" required /></label>
+    <button class="btn">Criar conta</button>
+  </form>
+
+  <p class="mt"><a href="/login">Voltar ao login</a></p>
+</section>

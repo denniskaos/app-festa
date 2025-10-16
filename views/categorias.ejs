@@ -1,0 +1,21 @@
+<div class="toolbar">
+  <h1>Categorias</h1>
+  <a class="btn" href="/categorias/new">Nova Categoria</a>
+</div>
+<table class="table">
+  <thead><tr><th>Nome</th><th>Tipo</th><th></th></tr></thead>
+  <tbody>
+  <% if (!cats.length) { %><tr><td colspan="3" class="muted">Sem categorias.</td></tr><% } %>
+  <% cats.forEach(c => { %>
+    <tr>
+      <td><%= c.name %></td><td><%= c.type %></td>
+      <td class="actions">
+        <a class="btn btn-light" href="/categorias/<%= c.id %>/edit">Editar</a>
+        <form method="post" action="/categorias/<%= c.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar?')">
+          <button class="btn btn-danger">Apagar</button>
+        </form>
+      </td>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>

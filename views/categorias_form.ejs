@@ -1,0 +1,11 @@
+<h1><%= c ? 'Editar' : 'Nova' %> Categoria</h1>
+<form method="post" action="<%= c ? '/categorias/' + c.id : '/categorias' %>" class="form-grid">
+  <label>Nome <input required type="text" name="name" value="<%= c?.name || '' %>" /></label>
+  <label>Tipo
+    <select name="type">
+      <option value="receita" <%= c?.type==='receita'?'selected':'' %>>Receita</option>
+      <option value="despesa" <%= c?.type==='despesa'?'selected':'' %>>Despesa</option>
+    </select>
+  </label>
+  <button class="btn"><%= c ? 'Guardar' : 'Criar' %></button>
+</form>

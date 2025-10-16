@@ -1,0 +1,8 @@
+<h1><%= p ? 'Editar' : 'Novo' %> Produto</h1>
+<form method="post" action="<%= p ? '/produtos/' + p.id : '/produtos' %>" class="form-grid">
+  <label>Nome <input required type="text" name="name" value="<%= p?.name || '' %>" /></label>
+  <label>Preço (€) <input required type="number" step="0.01" name="price" value="<%= p ? (p.price_cents/100).toFixed(2) : '' %>" /></label>
+  <label>Unidade <input type="text" name="unit" value="<%= p?.unit || 'un' %>" /></label>
+  <label><input type="checkbox" name="active" <%= p?.active ? 'checked' : '' %> /> Ativo</label>
+  <button class="btn"><%= p ? 'Guardar' : 'Criar' %></button>
+</form>

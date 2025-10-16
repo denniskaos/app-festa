@@ -1,0 +1,29 @@
+<section class="card">
+  <h1>Definições</h1>
+  <form method="post" action="/definicoes" class="form-grid">
+    <% KEYS.forEach(k => { %>
+      <label><%= k.label %>
+        <input type="<%= k.type %>" name="<%= k.key %>" value="<%= map[k.key] || '' %>" />
+      </label>
+    <% }) %>
+    <button class="btn">Guardar</button>
+  </form>
+</section>
+
+<section class="card" style="margin-top:12px">
+  <h3>O meu perfil</h3>
+  <% if (err) { %><div class="alert"><%= err %></div><% } %>
+  <% if (msg) { %><div class="alert success"><%= msg %></div><% } %>
+
+  <form method="post" action="/definicoes/perfil" class="form-grid">
+    <label>Nome <input name="name" value="<%= me.name %>" required></label>
+    <label>Email <input type="email" name="email" value="<%= me.email %>" required></label>
+
+    <div style="grid-column:1/-1"><strong>Alterar password (opcional)</strong></div>
+    <label>Password atual <input type="password" name="current_password"></label>
+    <label>Nova password <input type="password" name="new_password"></label>
+    <label>Confirmar nova <input type="password" name="confirm_password"></label>
+
+    <button class="btn">Guardar perfil</button>
+  </form>
+</section>

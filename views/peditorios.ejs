@@ -1,0 +1,72 @@
+<div class="toolbar">
+  <h1>Peditórios</h1>
+</div>
+
+<section class="card">
+  <h3>Novo peditório</h3>
+  <form method="post" action="/peditorios" class="form-grid">
+    <label>Data
+      <input type="date" name="dt" />
+    </label>
+    <label>Local
+      <input type="text" name="local" placeholder="Rua/Bairro/Freguesia" />
+    </label>
+    <label>Equipa
+      <input type="text" name="equipa" placeholder="(opcional)" />
+    </label>
+    <label>Valor (€)
+      <input type="number" step="0.01" name="valor" required />
+    </label>
+    <label style="grid-column:1/-1">Notas
+      <input type="text" name="notas" />
+    </label>
+    <button class="btn">Adicionar</button>
+  </form>
+</section>
+
+<div class="card">
+  <h3>Lista</h3>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Local</th>
+          <th>Equipa</th>
+          <th>Valor (€)</th>
+          <th>Notas</th>
+          <th style="width:220px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!itens.length) { %>
+          <tr><td colspan="6" class="muted">Sem peditórios registados.</td></tr>
+        <% } %>
+        <% itens.forEach(p => { %>
+          <tr>
+            <form id="edit-<%= p.id %>" method="post" action="/peditorios/<%= p.id %>"></form>
+            <td><input form="edit-<%= p.id %>" type="date" name="dt" value="<%= p.dt || '' %>" /></td>
+            <td><input form="edit-<%= p.id %>" type="text" name="local" value="<%= p.local || '' %>" /></td>
+            <td><input form="edit-<%= p.id %>" type="text" name="equipa" value="<%= p.equipa || '' %>" /></td>
+            <td><input form="edit-<%= p.id %>" type="number" step="0.01" name="valor" value="<%= (p.valor_cents/100).toFixed(2) %>" /></td>
+            <td><input form="edit-<%= p.id %>" type="text" name="notas" value="<%= p.notas || '' %>" /></td>
+            <td class="actions">
+              <button form="edit-<%= p.id %>" class="btn btn-light btn-sm">Guardar</button>
+              <form method="post" action="/peditorios/<%= p.id %>/delete" class="inline" onsubmit="return confirm('Apagar este peditório?')">
+                <button class="btn btn-danger btn-sm">Apagar</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="3" style="text-align:right">Total</th>
+          <th>€ <%= (total_valor_cents/100).toFixed(2) %></th>
+          <th colspan="2"></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>

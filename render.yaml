@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: festa-app
+    env: node
+    plan: starter
+    branch: main
+    autoDeploy: true
+    # region: frankfurt           # (opcional) escolhe Europa se quiseres latência menor
+    healthCheckPath: /healthz
+    numInstances: 1               # com Disk, mantém 1 instância
+
+    buildCommand: npm ci
+    startCommand: |
+      bash -lc '
+        mkdir -p /data
+        # Se existir uma seed local, copia apenas uma vez
+        if [ ! -f /data/festa.db ] && [ -f data/festa.db ]; then cp data/festa.db /data/festa.db; fi
+        node server.js
+      '
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION         # evita upgrades de runtime inesperados
+        value: 20
+      - key: DATABASE_PATH        # o teu código deve ler daqui
+        value: /data/festa.db
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TZ                   # logs/horários coerentes
+        value: Europe/Lisbon
+
+    disk:
+      name: festa-data
+      mountPath: /data
+      sizeGB: 1

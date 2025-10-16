@@ -1,0 +1,17 @@
+<div class="toolbar"><h1>Importar Cronograma</h1></div>
+<section class="card">
+  <form method="post" action="/events/import" enctype="multipart/form-data" class="form-grid">
+    <label style="grid-column:1/-1">Ficheiro
+      <input type="file" name="file" accept=".csv,.txt" required />
+    </label>
+    <button type="submit" class="btn">Importar</button>
+  </form>
+  <p class="muted">Formato: <code>dt;title</code> (cabeçalho opcional). Data em <code>YYYY-MM-DD</code> ou <code>DD/MM/YYYY</code>.</p>
+
+  <% if (typeof msg !== 'undefined' && msg) { %>
+    <p class="mt"><strong><%= msg %></strong></p>
+  <% } %>
+  <% if (typeof err !== 'undefined' && err) { %>
+    <p class="mt alert"><%= err %></p>
+  <% } %>
+</section>

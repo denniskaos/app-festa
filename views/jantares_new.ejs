@@ -1,0 +1,9 @@
+<h1>Novo Jantar</h1>
+<form method="post" action="/jantares" class="card" style="padding:12px">
+  <label>Data <input name="dt" type="date"></label><br>
+  <label>Pessoas <input name="pessoas" type="number" min="0" step="1"></label><br>
+  <label>Valor por pessoa (€) <input name="valor_pessoa" type="text" placeholder="ex.: 12,50"></label><br>
+  <label>Despesas (€) <input name="despesas" type="text" placeholder="ex.: 150,00"></label><br>
+  <button class="btn">Guardar</button>
+  <a class="btn btn-light" href="/jantares">Cancelar</a>
+</form>

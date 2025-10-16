@@ -1,0 +1,19 @@
+<div class="toolbar">
+  <h1>Editar Patrocinador</h1>
+</div>
+
+<form method="post" action="/patrocinadores/<%= p.id %>/update" class="card" style="padding:12px">
+  <label>Nome <input name="name" value="<%= p.name %>" required></label><br>
+  <label>Contacto <input name="contacto" value="<%= p.contacto || '' %>"></label><br>
+  <label>Tipo <input name="tipo" value="<%= p.tipo || '' %>"></label><br>
+  <label>Valor Prometido (€)
+    <input name="valor_prometido" type="text" value="<%= euros(p.valor_prometido_cents) %>">
+  </label><br>
+  <label>Valor Entregue (€)
+    <input name="valor_entregue" type="text" value="<%= euros(p.valor_entregue_cents) %>">
+  </label><br>
+  <label>Observações <textarea name="observ"><%= p.observ || '' %></textarea></label><br>
+
+  <button class="btn">Guardar</button>
+  <a class="btn btn-light" href="/patrocinadores">Cancelar</a>
+</form>
