@@ -69,7 +69,6 @@ if (process.env.DISABLE_VIEW_CACHE === '1') {
   app.set('view cache', false);
 }
 
-
 // express-ejs-layouts: usa views/layout.ejs por omissão
 app.set('layout', 'layout');
 app.set('layout extractScripts', true);
@@ -358,7 +357,6 @@ app.get('/readyz', (_req, res) => {
   }
 })();
 
-
 /* ======================== ROTAS APLICACIONAIS ======================== */
 // Autenticação primeiro (para setar req.session.user)
 app.use('/', authRoutes); // /login, /logout, /registar
@@ -370,7 +368,7 @@ app.use(readOnlyForViewers);
 app.use('/', dashboardRoutes);     // /dashboard
 app.use('/', eventsRoutes);        // /events
 app.use('/', jantaresRoutes);      // /jantares
-app.use('/', jantaresOrgRoutes);   // /organizador 
+app.use('/', jantaresOrgRoutes);   // /organizador (mesas, convidados, print)
 app.use('/', definicoesRoutes);    // /definicoes
 app.use('/', casaisRoutes);        // /casais
 app.use('/', usersRoutes);         // /utilizadores

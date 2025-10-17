@@ -15,7 +15,7 @@
       <input type="text" name="equipa" placeholder="(opcional)" />
     </label>
     <label>Valor (€)
-      <input type="number" step="0.01" name="valor" required />
+      <input type="number" step="0.01" inputmode="decimal" name="valor" required />
     </label>
     <label style="grid-column:1/-1">Notas
       <input type="text" name="notas" />
@@ -28,7 +28,7 @@
   <h3>Lista</h3>
 
   <div class="table-wrap">
-    <table class="table">
+    <table class="table table--form table--form-manual">
       <thead>
         <tr>
           <th>Data</th>
@@ -39,27 +39,46 @@
           <th style="width:220px">Ações</th>
         </tr>
       </thead>
+
       <tbody>
         <% if (!itens.length) { %>
           <tr><td colspan="6" class="muted">Sem peditórios registados.</td></tr>
         <% } %>
-        <% itens.forEach(p => { %>
+
+        <% itens.forEach(p => { const fid = `f-${p.id}`; %>
           <tr>
-            <form id="edit-<%= p.id %>" method="post" action="/peditorios/<%= p.id %>"></form>
-            <td><input form="edit-<%= p.id %>" type="date" name="dt" value="<%= p.dt || '' %>" /></td>
-            <td><input form="edit-<%= p.id %>" type="text" name="local" value="<%= p.local || '' %>" /></td>
-            <td><input form="edit-<%= p.id %>" type="text" name="equipa" value="<%= p.equipa || '' %>" /></td>
-            <td><input form="edit-<%= p.id %>" type="number" step="0.01" name="valor" value="<%= (p.valor_cents/100).toFixed(2) %>" /></td>
-            <td><input form="edit-<%= p.id %>" type="text" name="notas" value="<%= p.notas || '' %>" /></td>
-            <td class="actions">
-              <button form="edit-<%= p.id %>" class="btn btn-light btn-sm">Guardar</button>
-              <form method="post" action="/peditorios/<%= p.id %>/delete" class="inline" onsubmit="return confirm('Apagar este peditório?')">
-                <button class="btn btn-danger btn-sm">Apagar</button>
+            <td data-label="Data">
+              <input type="date" name="dt"
+                     value="<%= (p.dt || '').slice(0,10) %>"
+                     form="<%= fid %>">
+            </td>
+            <td data-label="Local">
+              <input name="local" value="<%= p.local || '' %>" form="<%= fid %>">
+            </td>
+            <td data-label="Equipa">
+              <input name="equipa" value="<%= p.equipa || '' %>" form="<%= fid %>">
+            </td>
+            <td data-label="Valor (€)">
+              <input name="valor" inputmode="decimal" step="0.01"
+                     value="<%= ((p.valor_cents||0)/100).toFixed(2) %>"
+                     form="<%= fid %>">
+            </td>
+            <td data-label="Notas">
+              <input name="notas" value="<%= p.notas || '' %>" form="<%= fid %>">
+            </td>
+            <td data-label="Ações" class="actions">
+              <button class="btn" form="<%= fid %>">Guardar</button>
+              <form method="post"
+                    action="/peditorios/<%= p.id %>/delete"
+                    onsubmit="return confirm('Apagar este peditório?')"
+                    style="display:inline">
+                <button class="btn btn-danger">Apagar</button>
               </form>
             </td>
           </tr>
         <% }) %>
       </tbody>
+
       <tfoot>
         <tr>
           <th colspan="3" style="text-align:right">Total</th>
@@ -70,3 +89,8 @@
     </table>
   </div>
 </div>
+
+<!-- Forms de update (fora da tabela) -->
+<% itens.forEach(p => { const fid = `f-${p.id}`; %>
+  <form id="<%= fid %>" method="post" action="/peditorios/<%= p.id %>"></form>
+<% }) %>

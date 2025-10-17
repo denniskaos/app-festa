@@ -7,8 +7,9 @@
   <title><%= (typeof title !== 'undefined' && title) ? `${title} · Festa da Aldeia` : 'Festa da Aldeia' %></title>
 
   <!-- estilos: primeiro o teu, depois o app.css responsivo -->
-  <link rel="stylesheet" href="/public/css/style.css" />
-  <link rel="stylesheet" href="/public/app.css" />
+  <link rel="stylesheet" href="/public/css/style.css?v=1" />
+<link rel="stylesheet" href="/public/app.css?v=<%= process.env.ASSET_VER || '20251017-01' %>" />
+
 </head>
 <body>
 
@@ -22,12 +23,15 @@
         </div>
       </a>
 
-      <% if (user) { %>
+      <% if (user) { 
+           const role = user.role || 'viewer';
+      %>
         <!-- botão hambúrguer (mostra em ecrãs pequenos) -->
         <button id="nav-toggle" class="nav-toggle" aria-controls="nav-menu" aria-expanded="false" aria-label="Menu">☰</button>
 
         <!-- navegação -->
         <nav id="nav-menu" class="nav" aria-label="Principal">
+          <!-- ITENS COMUNS A TODOS -->
           <a href="/">Painel</a>
           <a href="/movimentos">Movimentos</a>
           <a href="/jantares">Jantares</a>
@@ -35,9 +39,15 @@
           <a href="/patrocinadores">Patrocinadores</a>
           <a href="/peditorios">Peditórios</a>
           <a href="/casais">Casais</a>
-          <a href="/backup">Backup</a>
-          <a href="/definicoes">Definições</a>
-          <% if (user && user.role === 'admin') { %>
+
+          <!-- ITENS QUE O VIEWER NÃO PRECISA DE VER -->
+          <% if (role !== 'viewer') { %>
+            <a href="/backup">Backup</a>
+            <a href="/definicoes">Definições</a>
+          <% } %>
+
+          <!-- SÓ ADMIN -->
+          <% if (role === 'admin') { %>
             <a href="/utilizadores">Utilizadores</a>
           <% } %>
 
