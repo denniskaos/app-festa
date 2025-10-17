@@ -18,6 +18,7 @@ import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import eventsRoutes from './routes/events.js';
 import jantaresRoutes from './routes/jantares.js';
+import jantaresOrgRoutes from './routes/jantares_org.js';
 import definicoesRoutes from './routes/definicoes.js';
 import casaisRoutes from './routes/casais.js';
 import usersRoutes from './routes/users.js';
@@ -62,6 +63,12 @@ app.use(compression());
 // ---- VIEW ENGINE / LAYOUTS ----
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// desliga cache das views quando DISABLE_VIEW_CACHE=1
+if (process.env.DISABLE_VIEW_CACHE === '1') {
+  app.set('view cache', false);
+}
+
 
 // express-ejs-layouts: usa views/layout.ejs por omissão
 app.set('layout', 'layout');
@@ -363,6 +370,7 @@ app.use(readOnlyForViewers);
 app.use('/', dashboardRoutes);     // /dashboard
 app.use('/', eventsRoutes);        // /events
 app.use('/', jantaresRoutes);      // /jantares
+app.use('/', jantaresOrgRoutes);   // /organizador 
 app.use('/', definicoesRoutes);    // /definicoes
 app.use('/', casaisRoutes);        // /casais
 app.use('/', usersRoutes);         // /utilizadores

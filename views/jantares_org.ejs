@@ -1,0 +1,52 @@
+<!-- views/jantares_org.ejs -->
+<div class="toolbar">
+  <h1>Organizar — <%= j.dt || ('Jantar #' + j.id) %></h1>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="<%= urls.mesas %>">Mesas</a>
+    <a class="btn" href="<%= urls.convidados %>">Convidados</a>
+   <a class="btn btn-primary" href="<%= urls.print %>">Imprimir mesas</a>
+  </div>
+</div>
+
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Total de mesas</div>
+    <div class="stat-number"><%= mesas.length %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Convidados atribuídos</div>
+    <div class="stat-number">
+      <%= mesas.reduce((a,m)=> a + (m.ocupados || 0), 0) %>
+    </div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Convidados totais</div>
+    <div class="stat-number"><%= totConvidados %></div>
+  </div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Mesa</th><th>Lugares</th><th>Ocupados</th><th>Livres</th></tr>
+    </thead>
+    <tbody>
+      <% if (!mesas.length) { %>
+        <tr>
+          <td colspan="4" class="muted">
+            Ainda não existem mesas. Começa por <a href="<%= urls.mesas %>">criar mesas</a>.
+          </td>
+        </tr>
+      <% } %>
+      <% mesas.forEach(m => { const livres = (m.lugares||0) - (m.ocupados||0); %>
+        <tr>
+          <td><a href="<%= urls.mesas %>"><%= m.nome %></a></td>
+          <td><%= m.lugares || 0 %></td>
+          <td><%= m.ocupados || 0 %></td>
+          <td><%= livres < 0 ? 0 : livres %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+

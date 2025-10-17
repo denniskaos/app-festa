@@ -1,0 +1,100 @@
+<div class="toolbar">
+  <h1>Convidados — <%= j.dt || ('Jantar #' + j.id) %></h1>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="<%= urls.base %>">Organizar</a>
+    <a class="btn" href="<%= urls.mesas %>">Mesas</a>
+   <a class="btn btn-primary" href="<%= urls.print %>">Imprimir</a>
+
+  </div>
+</div>
+
+
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Total pago (registado)</div>
+    <div class="stat-number">€ <%= euros(sumPago) %></div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <form method="post" action="/jantares/<%= j.id %>/convidados" class="form-grid">
+    <label>Nome
+      <input name="nome" required />
+    </label>
+    <label>Mesa
+      <select name="mesa_id">
+        <option value="">(sem mesa)</option>
+        <% mesas.forEach(m => { %>
+          <option value="<%= m.id %>"><%= m.nome %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>Contacto
+      <input name="contacto" />
+    </label>
+    <label>Menu
+      <select name="menu">
+        <option value="normal">Normal</option>
+        <option value="vegetariano">Vegetariano</option>
+        <option value="sem_gluten">Sem glúten</option>
+        <option value="infantil">Infantil</option>
+        <option value="outro">Outro</option>
+      </select>
+    </label>
+    <label style="grid-column:1/-1;">Pedido especial
+      <input name="pedido_especial" placeholder="ex.: sem sal, alergia a frutos secos..." />
+    </label>
+    <label>Pago (€)
+      <input name="pago" inputmode="decimal" placeholder="0,00" />
+    </label>
+    <button class="btn">Adicionar convidado</button>
+  </form>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nome</th><th>Mesa</th><th>Menu</th><th>Pedido especial</th><th>Pago (€)</th><th>Presença</th><th style="width:220px">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!convidados.length) { %>
+        <tr><td colspan="7" class="muted">Ainda sem convidados.</td></tr>
+      <% } %>
+      <% convidados.forEach(c => { %>
+        <tr>
+          <form method="post" action="/jantares/<%= j.id %>/convidados/<%= c.id %>">
+            <td><input name="nome" value="<%= c.nome %>" /></td>
+            <td>
+              <select name="mesa_id">
+                <option value="">(sem mesa)</option>
+                <% mesas.forEach(m => { %>
+                  <option value="<%= m.id %>" <%= c.mesa_id===m.id ? 'selected' : '' %>><%= m.nome %></option>
+                <% }) %>
+              </select>
+            </td>
+            <td>
+              <select name="menu">
+                <% ['normal','vegetariano','sem_gluten','infantil','outro'].forEach(opt => { %>
+                  <option value="<%= opt %>" <%= c.menu===opt ? 'selected' : '' %>><%= opt.replace('_',' ') %></option>
+                <% }) %>
+              </select>
+            </td>
+            <td><input name="pedido_especial" value="<%= c.pedido_especial || '' %>" /></td>
+            <td><input name="pago" inputmode="decimal" value="<%= (c.pago_cents||0)/100 %>" /></td>
+            <td style="text-align:center;">
+              <input type="checkbox" name="presenca" <%= c.presenca ? 'checked' : '' %> />
+            </td>
+            <td>
+              <button class="btn btn-light">Guardar</button>
+              <form method="post" action="/jantares/<%= j.id %>/convidados/<%= c.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar convidado?')">
+                <button class="btn btn-danger">Apagar</button>
+              </form>
+            </td>
+          </form>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

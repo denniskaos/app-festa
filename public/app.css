@@ -87,3 +87,11 @@ label{display:block;margin:8px 0}
 /* Garante que nada fica por baixo do overlay */
 main.page{position:relative; z-index:1;}
 
+/* Força a coluna Ações a aparecer também em ecrãs pequenos */
+.table td.actions a,
+.table td.actions form { display:inline-block; margin:2px 4px; }
+
+@media (max-width: 760px) {
+  .table td.actions { display:block; }
+  .table td.actions .btn { display:inline-block; }
+}

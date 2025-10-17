@@ -1,14 +1,36 @@
-<section class="card">
+<div class="card" style="max-width:420px;margin:24px auto;">
   <h1>Criar conta</h1>
-  <% if (error) { %><div class="alert"><%= error %></div><% } %>
 
-  <form method="post" action="/registar" class="form-grid">
-    <label>Nome <input name="name" required /></label>
-    <label>Email <input type="email" name="email" required /></label>
-    <label>Password <input type="password" name="password" required /></label>
-    <label>Confirmar password <input type="password" name="confirm" required /></label>
-    <button class="btn">Criar conta</button>
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+
+  <form method="post" action="/registar" autocomplete="off" novalidate>
+    <!-- “armadilhas” para travar autofill agressivo dos browsers -->
+    <input type="text" name="fake-username" autocomplete="username"
+           tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0">
+    <input type="password" name="fake-password" autocomplete="new-password"
+           tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0">
+
+    <label>Nome</label>
+    <input type="text" name="name" autocomplete="name" required>
+
+    <label>Email</label>
+    <input type="email" name="email" inputmode="email"
+           autocomplete="email" autocapitalize="none" spellcheck="false" required>
+
+    <label>Palavra-passe</label>
+    <input type="password" name="password" autocomplete="new-password" required>
+
+    <label>Confirmar palavra-passe</label>
+    <!-- podes usar name="confirm" (preferido) ou "password2";
+         a rota aceita ambos -->
+    <input type="password" name="confirm" autocomplete="new-password" required>
+
+    <button class="btn btn-primary" type="submit" style="margin-top:8px;">Criar conta</button>
   </form>
 
-  <p class="mt"><a href="/login">Voltar ao login</a></p>
-</section>
+  <p class="muted" style="margin-top:8px;">
+    Já tens conta? <a href="/login">Entrar</a>
+  </p>
+</div>

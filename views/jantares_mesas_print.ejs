@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <title>Mesas · <%= jantar.dt || '' %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --ink:#111; --muted:#666; --line:#ddd; --brand:#1f6feb; }
+    * { box-sizing: border-box; }
+    body { font: 12pt/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:var(--ink); margin:20px; }
+    header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    header img { height:36px; }
+    h1 { font-size: 18pt; margin: 0 0 2px; }
+    .muted { color: var(--muted); }
+    .toolbar { display:flex; gap:8px; margin:10px 0 16px; }
+    .btn { padding:8px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; font-size:12pt; }
+    .btn-primary { background: var(--brand); color:#fff; border-color: var(--brand); }
+
+    .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
+    .mesa { border:1px solid var(--line); border-radius:10px; padding:10px 12px; break-inside: avoid; page-break-inside: avoid; }
+    .mesa h2 { margin:0 0 6px; font-size:14pt; }
+    .small { font-size:10pt; color:var(--muted); }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-top:1px solid var(--line); padding:6px 6px; text-align:left; vertical-align:top; page-break-inside: avoid; }
+    th { border-top:0; font-size: 10pt; color: var(--muted); }
+    .page-break { page-break-after: always; }
+
+    @media print {
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body { margin: 12mm; }
+      .no-print { display:none !important; }
+      .grid { grid-template-columns: 1fr 1fr; gap:12px; }
+    }
+  </style>
+</head>
+<body>
+
+<% if (!minimal) { %>
+  <!-- Cabeçalho e toolbar só aparecem no modo "normal" -->
+  <header>
+    <img src="<%= settings.logo_path || '/public/img/logo.png' %>" alt="" />
+    <div>
+      <h1>Planos de Mesa — <%= jantar.dt || '' %></h1>
+      <div class="muted"><%= settings.line1 || 'Comissão de Festas' %> · <%= settings.line2 || '' %></div>
+    </div>
+  </header>
+
+  <div class="toolbar no-print">
+    <button class="btn btn-primary" onclick="window.print()">Imprimir</button>
+    <button class="btn" onclick="history.back()">Voltar</button>
+    <span class="muted" style="margin-left:auto">gerado em <%= now.toLocaleString('pt-PT') %></span>
+  </div>
+<% } %>
+
+<!-- Só MESAS -->
+<section class="grid">
+  <% if (!mesas.length) { %>
+    <div class="mesa"><em class="muted">Sem mesas registadas.</em></div>
+  <% } %>
+
+  <% mesas.forEach(m => { %>
+    <article class="mesa">
+      <h2>Mesa <%= m.nome %>
+        <span class="small">(<%= (m.convidados || []).length %>/<%= m.lugares || 0 %> lugares)</span>
+      </h2>
+
+      <% if (!m.convidados.length) { %>
+        <div class="small muted">Sem convidados nesta mesa.</div>
+      <% } else { %>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:28px">#</th>
+              <th>Nome</th>
+              <th>Menu</th>
+              <th>Pedido especial</th>
+              <th style="width:55px">Pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% m.convidados.forEach((c, idx) => { %>
+              <tr>
+                <td><%= idx+1 %></td>
+                <td><%= c.nome %></td>
+                <td><%= MENU_LABEL[c.menu] || 'Normal' %></td>
+                <td><%= c.pedido_especial || '' %></td>
+                <td><%= (c.pago_cents||0) > 0 ? '✓' : '' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </article>
+  <% }) %>
+</section>
+
+<% if (!minimal && semMesa.length) { %>
+  <div class="page-break"></div>
+  <section class="mesa">
+    <h2>Convidados sem mesa</h2>
+    <table>
+      <thead>
+        <tr><th style="width:28px">#</th><th>Nome</th><th>Menu</th><th>Pedido especial</th><th style="width:55px">Pago</th></tr>
+      </thead>
+      <tbody>
+        <% semMesa.forEach((c, idx) => { %>
+          <tr>
+            <td><%= idx+1 %></td>
+            <td><%= c.convidado_nome %></td>
+            <td><%= MENU_LABEL[c.menu] || 'Normal' %></td>
+            <td><%= c.pedido_especial || '' %></td>
+            <td><%= (c.pago_cents||0) > 0 ? '✓' : '' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </section>
+<% } %>
+
+<script>
+  // No modo minimal: imprimir automaticamente e voltar atrás ao fechar diálogo
+  <% if (minimal) { %>
+    window.addEventListener('load', () => setTimeout(() => window.print(), 150));
+    window.addEventListener('afterprint', () => setTimeout(() => history.back(), 100));
+  <% } %>
+</script>
+
+</body>
+</html>

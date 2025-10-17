@@ -1,5 +1,5 @@
 <div class="toolbar">
-  <h1>Jantares</h1>
+  <h1>Jantares <span class="muted" style="font-weight:400">v-org-2</span></h1>
   <a class="btn" style="margin-left:auto" href="/jantares/new">Novo</a>
 </div>
 
@@ -12,12 +12,21 @@
 <div class="card">
   <table class="table">
     <thead>
-      <tr><th>Data</th><th>Pessoas</th><th>€/pessoa</th><th>Receita</th><th>Despesas</th><th>Lucro</th><th></th></tr>
+      <tr>
+        <th>Data</th>
+        <th>Pessoas</th>
+        <th>€/pessoa</th>
+        <th>Receita</th>
+        <th>Despesas</th>
+        <th>Lucro</th>
+        <th style="width:280px">Ações</th>
+      </tr>
     </thead>
     <tbody>
       <% if (!jantares.length) { %>
         <tr><td colspan="7" class="muted">Sem jantares.</td></tr>
       <% } %>
+
       <% for (const j of jantares) { %>
         <tr>
           <td><%= j.dt || '' %></td>
@@ -28,6 +37,8 @@
           <td>€ <%= euros(j.lucro_cents) %></td>
           <td>
             <a class="btn btn-light" href="/jantares/<%= j.id %>/edit">Editar</a>
+            <a class="btn" href="/jantares/<%= j.id %>/organizar">Organizar</a>
+            <a class="btn btn-light" href="/jantares/<%= j.id %>/mesas/print">Imprimir</a>
             <form method="post" action="/jantares/<%= j.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar este jantar?')">
               <button class="btn btn-danger">Apagar</button>
             </form>
