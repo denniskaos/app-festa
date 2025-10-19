@@ -1,10 +1,22 @@
 <!-- views/jantares_org.ejs -->
 <div class="toolbar">
+  <a class="btn btn-secondary"
+     href="/jantares"
+     onclick="if(document.referrer && new URL(document.referrer).origin===location.origin){history.back();return false;}"
+     aria-label="Voltar">Voltar</a>
+
   <h1>Organizar — <%= j.dt || ('Jantar #' + j.id) %></h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn" href="<%= urls.mesas %>">Mesas</a>
     <a class="btn" href="<%= urls.convidados %>">Convidados</a>
-   <a class="btn btn-primary" href="<%= urls.print %>">Imprimir mesas</a>
+    <a class="btn" href="<%= urls.despesas %>">Despesas</a>
+    <a class="btn btn-light" href="<%= urls.print %>">Imprimir</a>
+    <form method="post" action="/jantares/<%= j.id %>/lancar" style="display:inline"
+          onsubmit="return confirm('Lançar para Movimentos?')">
+      <button class="btn btn-primary" <%= j.lancado ? 'disabled aria-disabled="true"' : '' %>>
+        <%= j.lancado ? 'Já lançado' : 'Lançar para Movimentos' %>
+      </button>
+    </form>
   </div>
 </div>
 
@@ -49,4 +61,3 @@
     </tbody>
   </table>
 </div>
-

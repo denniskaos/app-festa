@@ -1,5 +1,10 @@
 <% /* v-mesas-mobile-2025-10-18 */ %>
 <div class="toolbar">
+  <a class="btn btn-secondary"
+     href="/jantares"
+     onclick="if(document.referrer && new URL(document.referrer).origin===location.origin){history.back();return false;}"
+     aria-label="Voltar">Voltar</a>
+
   <h1>Mesas — <%= j.dt || ('Jantar #' + j.id) %></h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn" href="<%= urls.base %>">Organizar</a>

@@ -95,7 +95,8 @@ const migrate = db.transaction(() => {
       dt TEXT,
       pessoas INTEGER NOT NULL DEFAULT 0,
       valor_pessoa_cents INTEGER NOT NULL DEFAULT 0,
-      despesas_cents INTEGER NOT NULL DEFAULT 0
+      despesas_cents INTEGER NOT NULL DEFAULT 0,
+      lancado INTEGER NOT NULL DEFAULT 0         -- novo
     );
 
     CREATE TABLE IF NOT EXISTS casais (
@@ -112,7 +113,7 @@ const migrate = db.transaction(() => {
     );
   `);
 
-  // --- Organização de jantares: Mesas & Convidados (fora do template) ---
+  // --- Organização de jantares: Mesas & Convidados ---
   db.exec(`
     CREATE TABLE IF NOT EXISTS jantares_mesas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,12 +134,28 @@ const migrate = db.transaction(() => {
       menu TEXT CHECK (menu IN ('normal','vegetariano','sem_gluten','infantil','outro')) DEFAULT 'normal',
       pedido_especial TEXT,
       pago_cents INTEGER NOT NULL DEFAULT 0,
-      presenca INTEGER NOT NULL DEFAULT 0
+      presenca INTEGER NOT NULL DEFAULT 0,
+      preco_cents INTEGER                          -- novo (NULL = usa preço base)
     );
   `);
 
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mesas_jantar ON jantares_mesas(jantar_id);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_convidados_jantar ON jantares_convidados(jantar_id);`);
+
+  // garantir colunas novas (idempotente)
+  try { db.exec(`ALTER TABLE jantares ADD COLUMN lancado INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.exec(`ALTER TABLE jantares_convidados ADD COLUMN preco_cents INTEGER`); } catch {}
+
+  // --- Despesas detalhadas de jantares ---
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS jantares_despesas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      jantar_id INTEGER NOT NULL REFERENCES jantares(id) ON DELETE CASCADE,
+      descr TEXT NOT NULL,
+      valor_cents INTEGER NOT NULL DEFAULT 0
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_despesas_jantar ON jantares_despesas(jantar_id);`);
 
   /* ---------- SETTINGS: rebuild se faltar 'id' (preserva valores) ---------- */
   {
@@ -353,12 +370,13 @@ const migrate = db.transaction(() => {
           dt TEXT,
           pessoas INTEGER NOT NULL DEFAULT 0,
           valor_pessoa_cents INTEGER NOT NULL DEFAULT 0,
-          despesas_cents INTEGER NOT NULL DEFAULT 0
+          despesas_cents INTEGER NOT NULL DEFAULT 0,
+          lancado INTEGER NOT NULL DEFAULT 0
         );
       `);
     } else {
       const cols = columnsOf('jantares');
-      const required = ['id','dt','pessoas','valor_pessoa_cents','despesas_cents'];
+      const required = ['id','dt','pessoas','valor_pessoa_cents','despesas_cents','lancado'];
       const needsRebuild = !cols.includes('id') || !required.every(c => cols.includes(c));
 
       if (needsRebuild) {
@@ -369,7 +387,8 @@ const migrate = db.transaction(() => {
             dt TEXT,
             pessoas INTEGER NOT NULL DEFAULT 0,
             valor_pessoa_cents INTEGER NOT NULL DEFAULT 0,
-            despesas_cents INTEGER NOT NULL DEFAULT 0
+            despesas_cents INTEGER NOT NULL DEFAULT 0,
+            lancado INTEGER NOT NULL DEFAULT 0
           );
         `);
 
@@ -389,13 +408,14 @@ const migrate = db.transaction(() => {
         const expr_desp = centsFrom(['despesas_cents','custo_cents'], ['despesas','custo']);
 
         const sql = `
-          INSERT INTO jantares (id, dt, pessoas, valor_pessoa_cents, despesas_cents)
+          INSERT INTO jantares (id, dt, pessoas, valor_pessoa_cents, despesas_cents, lancado)
           SELECT
             ${has('id') ? 'id' : 'rowid'},
             ${expr_dt},
             COALESCE(${expr_pess}, 0),
             COALESCE(${expr_val}, 0),
-            COALESCE(${expr_desp}, 0)
+            COALESCE(${expr_desp}, 0),
+            0
           FROM jantares__old;
         `;
         db.exec(sql);
@@ -406,6 +426,7 @@ const migrate = db.transaction(() => {
         add('pessoas', 'INTEGER NOT NULL DEFAULT 0');
         add('valor_pessoa_cents', 'INTEGER NOT NULL DEFAULT 0');
         add('despesas_cents', 'INTEGER NOT NULL DEFAULT 0');
+        add('lancado', 'INTEGER NOT NULL DEFAULT 0');
       }
     }
   }

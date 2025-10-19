@@ -1,10 +1,14 @@
 <div class="toolbar">
+  <a class="btn btn-secondary"
+     href="/jantares"
+     onclick="if(document.referrer && new URL(document.referrer).origin===location.origin){history.back();return false;}"
+     aria-label="Voltar">Voltar</a>
+
   <h1>Convidados — <%= j.dt || ('Jantar #' + j.id) %></h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn" href="<%= urls.base %>">Organizar</a>
     <a class="btn" href="<%= urls.mesas %>">Mesas</a>
-   <a class="btn btn-primary" href="<%= urls.print %>">Imprimir</a>
-
+    <a class="btn btn-primary" href="<%= urls.print %>">Imprimir</a>
   </div>
 </div>
 
@@ -52,49 +56,71 @@
 </div>
 
 <div class="card">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Nome</th><th>Mesa</th><th>Menu</th><th>Pedido especial</th><th>Pago (€)</th><th>Presença</th><th style="width:220px">Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% if (!convidados.length) { %>
-        <tr><td colspan="7" class="muted">Ainda sem convidados.</td></tr>
-      <% } %>
-      <% convidados.forEach(c => { %>
+  <div class="table-wrap">
+    <table class="table table--form table--form-manual">
+      <thead>
         <tr>
-          <form method="post" action="/jantares/<%= j.id %>/convidados/<%= c.id %>">
-            <td><input name="nome" value="<%= c.nome %>" /></td>
-            <td>
-              <select name="mesa_id">
-                <option value="">(sem mesa)</option>
-                <% mesas.forEach(m => { %>
-                  <option value="<%= m.id %>" <%= c.mesa_id===m.id ? 'selected' : '' %>><%= m.nome %></option>
-                <% }) %>
-              </select>
-            </td>
-            <td>
-              <select name="menu">
-                <% ['normal','vegetariano','sem_gluten','infantil','outro'].forEach(opt => { %>
-                  <option value="<%= opt %>" <%= c.menu===opt ? 'selected' : '' %>><%= opt.replace('_',' ') %></option>
-                <% }) %>
-              </select>
-            </td>
-            <td><input name="pedido_especial" value="<%= c.pedido_especial || '' %>" /></td>
-            <td><input name="pago" inputmode="decimal" value="<%= (c.pago_cents||0)/100 %>" /></td>
-            <td style="text-align:center;">
-              <input type="checkbox" name="presenca" <%= c.presenca ? 'checked' : '' %> />
-            </td>
-            <td>
-              <button class="btn btn-light">Guardar</button>
-              <form method="post" action="/jantares/<%= j.id %>/convidados/<%= c.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar convidado?')">
-                <button class="btn btn-danger">Apagar</button>
-              </form>
-            </td>
-          </form>
+          <th>Nome</th>
+          <th>Mesa</th>
+          <th>Menu</th>
+          <th>Pedido especial</th>
+          <th>Pago (€)</th>
+          <th>Presença</th>
+          <th style="width:220px">Ações</th>
         </tr>
-      <% }) %>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        <% if (!convidados.length) { %>
+          <tr><td colspan="7" class="muted">Ainda sem convidados.</td></tr>
+        <% } %>
+        <% convidados.forEach(c => { %>
+          <tr>
+            <!-- UM único form por linha; o botão Apagar usa 'formaction' -->
+            <form method="post" action="/jantares/<%= j.id %>/convidados/<%= c.id %>">
+              <td data-label="Nome">
+                <input name="nome" value="<%= c.nome %>" />
+              </td>
+              <td data-label="Mesa">
+                <select name="mesa_id">
+                  <option value="">(sem mesa)</option>
+                  <% mesas.forEach(m => { %>
+                    <option value="<%= m.id %>" <%= c.mesa_id===m.id ? 'selected' : '' %>><%= m.nome %></option>
+                  <% }) %>
+                </select>
+              </td>
+              <td data-label="Menu">
+                <select name="menu">
+                  <option value="normal"      <%= c.menu==='normal' ? 'selected' : '' %>     >Normal</option>
+                  <option value="vegetariano" <%= c.menu==='vegetariano' ? 'selected' : '' %>>Vegetariano</option>
+                  <option value="sem_gluten"  <%= c.menu==='sem_gluten' ? 'selected' : '' %> >Sem glúten</option>
+                  <option value="infantil"    <%= c.menu==='infantil' ? 'selected' : '' %>   >Infantil</option>
+                  <option value="outro"       <%= c.menu==='outro' ? 'selected' : '' %>      >Outro</option>
+                </select>
+              </td>
+              <td data-label="Pedido especial">
+                <input name="pedido_especial" value="<%= c.pedido_especial || '' %>" />
+              </td>
+              <td data-label="Pago (€)">
+                <input name="pago" inputmode="decimal" value="<%= (c.pago_cents||0)/100 %>" />
+              </td>
+              <td data-label="Presença" style="text-align:center">
+                <label style="display:inline-flex;align-items:center;gap:6px;">
+                  <input type="checkbox" name="presenca" <%= c.presenca ? 'checked' : '' %> />
+                  <span class="muted">Presente</span>
+                </label>
+              </td>
+              <td data-label="Ações" class="actions">
+                <button class="btn btn-light">Guardar</button>
+                <button
+                  class="btn btn-danger"
+                  formaction="/jantares/<%= j.id %>/convidados/<%= c.id %>/delete"
+                  onclick="return confirm('Apagar convidado?')"
+                >Apagar</button>
+              </td>
+            </form>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
 </div>
