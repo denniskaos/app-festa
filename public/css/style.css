@@ -84,3 +84,14 @@ input,textarea,select{background:#fff;color:var(--text);border:1px solid var(--b
 
 /* Eventos concluídos (cronograma) */
 .row-done input{ text-decoration:line-through; color:#777; }
+
+/* Botão secundário (usa a cor definida nas Definições, com fallback) */
+.btn-secondary{
+  background: var(--secondary, #b58900);
+  color:#fff;
+  border:1px solid rgba(0,0,0,.08);
+}
+.btn-secondary:hover{ filter:brightness(.95); }
+.btn-secondary:disabled,
+.btn-secondary[aria-disabled="true"]{ opacity:.65; pointer-events:none; }
+
