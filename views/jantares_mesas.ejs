@@ -1,13 +1,12 @@
+<% /* v-mesas-mobile-2025-10-18 */ %>
 <div class="toolbar">
   <h1>Mesas — <%= j.dt || ('Jantar #' + j.id) %></h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn" href="<%= urls.base %>">Organizar</a>
     <a class="btn" href="<%= urls.convidados %>">Convidados</a>
     <a class="btn btn-primary" href="<%= urls.print %>">Imprimir</a>
-
   </div>
 </div>
-
 
 <div class="card" style="margin-bottom:12px;">
   <form method="post" action="/jantares/<%= j.id %>/mesas" class="form-grid">
@@ -25,29 +24,52 @@
 </div>
 
 <div class="card">
-  <table class="table">
-    <thead><tr><th>Mesa</th><th>Lugares</th><th>Ocupados</th><th>Notas</th><th style="width:180px">Ações</th></tr></thead>
-    <tbody>
-      <% if (!mesas.length) { %>
-        <tr><td colspan="5" class="muted">Ainda sem mesas.</td></tr>
-      <% } %>
-      <% mesas.forEach(m => { %>
+  <div class="table-wrap">
+    <table class="table table--form table--form-manual">
+      <thead>
         <tr>
-          <form method="post" action="/jantares/<%= j.id %>/mesas/<%= m.id %>">
-            <td><input name="nome" value="<%= m.nome %>" /></td>
-            <td><input name="lugares" type="number" min="0" value="<%= m.lugares %>" /></td>
-            <td><%= m.ocupados %></td>
-            <td><input name="notas" value="<%= m.notas || '' %>" /></td>
-            <td>
-              <button class="btn btn-light">Guardar</button>
-              <form method="post" action="/jantares/<%= j.id %>/mesas/<%= m.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar esta mesa?')">
+          <th>Mesa</th>
+          <th>Lugares</th>
+          <th>Ocupados</th>
+          <th>Notas</th>
+          <th style="width:180px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!mesas.length) { %>
+          <tr><td colspan="5" class="muted">Ainda sem mesas.</td></tr>
+        <% } %>
+
+        <% mesas.forEach(m => { %>
+          <tr>
+            <!-- Campos da linha apontam para este form invisível -->
+            <td data-label="Mesa">
+              <input name="nome" value="<%= m.nome %>" form="f-<%= m.id %>" />
+            </td>
+            <td data-label="Lugares">
+              <input name="lugares" type="number" min="0" value="<%= m.lugares %>" form="f-<%= m.id %>" />
+            </td>
+            <td data-label="Ocupados"><%= m.ocupados %></td>
+            <td data-label="Notas">
+              <input name="notas" value="<%= m.notas || '' %>" form="f-<%= m.id %>" />
+            </td>
+            <td data-label="Ações" class="actions">
+              <!-- Form “Guardar” (invisível) -->
+              <form id="f-<%= m.id %>" method="post" action="/jantares/<%= j.id %>/mesas/<%= m.id %>"></form>
+
+              <button class="btn btn-light" form="f-<%= m.id %>">Guardar</button>
+
+              <!-- Form “Apagar” separado (não aninhado) -->
+              <form method="post"
+                    action="/jantares/<%= j.id %>/mesas/<%= m.id %>/delete"
+                    style="display:inline"
+                    onsubmit="return confirm('Apagar esta mesa?')">
                 <button class="btn btn-danger">Apagar</button>
               </form>
             </td>
-          </form>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
 </div>
-
