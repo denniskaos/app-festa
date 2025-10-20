@@ -1,44 +1,80 @@
 <div class="toolbar">
   <h1>Jantares</h1>
-  <a class="btn" style="margin-left:auto" href="/jantares/new">Novo</a>
+  <a class="btn btn-primary" href="/jantares/new">Novo</a>
 </div>
 
+<style>
+  /* Tabela: apenas para melhorar alinhamento */
+  .table td { vertical-align: middle; }
+  /* Mobile: 1 coluna */
+  @media (max-width: 640px){
+    .acoes-grid { grid-template-columns: 1fr !important; max-width: 280px; }
+  }
+</style>
+
 <div class="cards" style="margin-bottom:12px;">
-  <div class="card stat"><div class="stat-label">Receita</div><div class="stat-number">€ <%= euros(totalReceita) %></div></div>
-  <div class="card stat"><div class="stat-label">Despesas</div><div class="stat-number">€ <%= euros(totalDespesas) %></div></div>
-  <div class="card stat"><div class="stat-label">Lucro</div><div class="stat-number">€ <%= euros(totalLucro) %></div></div>
+  <div class="card stat">
+    <div class="stat-label">Receita</div>
+    <div class="stat-number">€ <%= euros(totalReceita) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Despesas</div>
+    <div class="stat-number">€ <%= euros(totalDespesas) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Lucro</div>
+    <div class="stat-number">€ <%= euros(totalLucro) %></div>
+  </div>
 </div>
 
 <div class="card">
   <table class="table">
     <thead>
       <tr>
-        <th>Data</th><th>Pessoas</th><th>€/pessoa</th>
-        <th>Receita</th><th>Despesas</th><th>Lucro</th><th>Ações</th>
+        <th>Data</th>
+        <th>Título</th>
+        <th>Pessoas</th>
+        <th>€/pessoa</th>
+        <th>Receita</th>
+        <th>Despesas</th>
+        <th>Saldo</th>
+        <th style="width:340px">Ações</th>
       </tr>
     </thead>
     <tbody>
-      <% if (!jantares.length) { %>
-        <tr><td colspan="7" class="muted">Sem jantares.</td></tr>
-      <% } %>
-      <% for (const j of jantares) { %>
+      <% jantares.forEach(j => { %>
         <tr>
-          <td data-label="Data"><span class="v"><%= j.dt || '' %></span></td>
-          <td data-label="Pessoas"><span class="v"><%= j.pessoas %></span></td>
-          <td data-label="€/pessoa"><span class="v">€ <%= euros(j.valor_pessoa_cents) %></span></td>
-          <td data-label="Receita"><span class="v">€ <%= euros(j.receita_cents) %></span></td>
-          <td data-label="Despesas"><span class="v">€ <%= euros(j.despesas_cents) %></span></td>
-          <td data-label="Lucro"><span class="v">€ <%= euros(j.lucro_cents) %></span></td>
-          <td class="actions" data-label="Ações">
-            <a class="btn btn-light" href="/jantares/<%= j.id %>/edit">Editar</a>
-            <a class="btn" href="/jantares/<%= j.id %>/organizar">Organizar</a>
-            <a class="btn btn-light" href="/jantares/<%= j.id %>/mesas/print" target="_blank" rel="noopener">Imprimir</a>
-            <form method="post" action="/jantares/<%= j.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar este jantar?')">
-              <button class="btn btn-danger">Apagar</button>
-            </form>
+          <td><%= j.dt || '—' %></td>
+          <td><%= j.title || '—' %></td>
+          <td><%= j.pessoas %></td>
+          <td>€ <%= euros(j.valor_pessoa_cents) %></td>
+          <td>€ <%= euros(j.receita_cents) %></td>
+          <td>€ <%= euros(j.despesas_cents) %></td>
+          <td>€ <%= euros(j.receita_cents - j.despesas_cents) %></td>
+          <td>
+            <!-- Forçar GRID sempre; inline + !important para ganhar a qualquer override -->
+            <div class="acoes-grid"
+                 style="
+                   display: grid !important;
+                   grid-template-columns: repeat(2, minmax(120px, 1fr)) !important;
+                   gap: 10px !important;
+                   max-width: 360px !important;
+                   align-items: stretch;">
+              <a class="btn btn-light" href="/jantares/<%= j.id %>/edit">Editar</a>
+              <a class="btn btn-primary" href="/jantares/<%= j.id %>/organizar">Organizar</a>
+              <a class="btn btn-light"
+                 href="/jantares/<%= j.id %>/mesas/print"
+                 target="_blank" rel="noopener">Imprimir</a>
+              <form method="post"
+                    action="/jantares/<%= j.id %>/delete"
+                    onsubmit="return confirm('Apagar este jantar?')"
+                    style="display: contents">
+                <button class="btn btn-danger">Apagar</button>
+              </form>
+            </div>
           </td>
         </tr>
-      <% } %>
+      <% }) %>
     </tbody>
   </table>
 </div>

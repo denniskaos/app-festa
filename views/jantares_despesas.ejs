@@ -1,0 +1,78 @@
+<div class="toolbar">
+  <a class="btn btn-secondary"
+     href="/jantares"
+     onclick="if(document.referrer && new URL(document.referrer).origin===location.origin){history.back();return false;}"
+     aria-label="Voltar">Voltar</a>
+
+  <h1>Despesas — <%= j.dt || ('Jantar #' + j.id) %></h1>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="<%= urls.base %>">Organizar</a>
+    <a class="btn" href="<%= urls.mesas %>">Mesas</a>
+    <a class="btn" href="<%= urls.convidados %>">Convidados</a>
+  </div>
+</div>
+
+
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Total de despesas (este jantar)</div>
+    <div class="stat-number">€ <%= euros(total) %></div>
+  </div>
+</div>
+
+<section class="card" style="margin-bottom:12px;">
+  <h3>Nova despesa</h3>
+  <form method="post" action="/jantares/<%= j.id %>/despesas" class="form-grid">
+    <label>Descrição
+      <input name="descr" required placeholder="Ex.: Bebidas, Aluguer de salão, Música..." />
+    </label>
+    <label>Valor (€)
+      <input type="number" inputmode="decimal" step="0.01" name="valor" required placeholder="0,00" />
+    </label>
+    <button class="btn">Adicionar</button>
+  </form>
+</section>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table table--form table--form-manual">
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Valor (€)</th>
+          <th style="width:200px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!linhas.length) { %>
+          <tr><td colspan="3" class="muted">Sem despesas registadas.</td></tr>
+        <% } %>
+        <% linhas.forEach(l => { %>
+          <tr>
+            <form method="post" action="/jantares/<%= j.id %>/despesas/<%= l.id %>">
+              <td data-label="Descrição">
+                <input name="descr" value="<%= l.descr %>" />
+              </td>
+              <td data-label="Valor (€)">
+                <input name="valor" inputmode="decimal" value="<%= (l.valor_cents||0)/100 %>" />
+              </td>
+              <td data-label="Ações" class="actions">
+                <button class="btn btn-light">Guardar</button>
+                <button class="btn btn-danger"
+                        formaction="/jantares/<%= j.id %>/despesas/<%= l.id %>/delete"
+                        onclick="return confirm('Apagar despesa?')">Apagar</button>
+              </td>
+            </form>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th style="text-align:right">Total</th>
+          <th>€ <%= euros(total) %></th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
