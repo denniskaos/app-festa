@@ -15,6 +15,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.join(__dirname, '..');
 
+// Caminho absoluto do ficheiro SQLite atualmente aberto
+const DB_FILE = db?.name || path.join(ROOT, 'data', 'festa.db');
+
 /* ----------------- helpers comuns ----------------- */
 
 function listTables() {
@@ -86,7 +89,17 @@ router.get('/backup', requireAuth, (_req, res) => {
     try { counts[t.name] = db.prepare(`SELECT COUNT(*) AS c FROM "${t.name}"`).get().c; }
     catch { counts[t.name] = 0; }
   }
-  res.render('backup', { title: 'Backup', tables, counts });
+  res.render('backup', { title: 'Backup', tables, counts, dbPath: DB_FILE });
+});
+
+/* ----------------- download direto da DB ----------------- */
+router.get('/backup/download', requireAuth, (req, res, next) => {
+  try {
+    if (!fs.existsSync(DB_FILE)) {
+      return res.status(404).type('text').send('Ficheiro da base de dados não encontrado.');
+    }
+    res.download(DB_FILE, 'festa.db');
+  } catch (e) { next(e); }
 });
 
 /* ----------------- export JSON ----------------- */
@@ -153,11 +166,15 @@ router.get('/backup/export/movimentos.csv', requireAuth, (_req, res) => {
 
 router.get('/backup/export/jantares.csv', requireAuth, (_req, res) => {
   const rows = db.prepare(`
-    SELECT id, dt, pessoas, valor_pessoa_cents, despesas_cents
+    SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents
     FROM jantares ORDER BY date(dt) DESC, id DESC
   `).all();
-  const headers = ['id','dt','pessoas','valor_pessoa_cents','valor_pessoa_euros','despesas_cents','despesas_euros'];
-  const data = rows.map(r => [r.id, r.dt||'', r.pessoas??0, r.valor_pessoa_cents??0, eurosFromCents(r.valor_pessoa_cents), r.despesas_cents??0, eurosFromCents(r.despesas_cents)]);
+  const headers = ['id','dt','title','pessoas','valor_pessoa_cents','valor_pessoa_euros','despesas_cents','despesas_euros'];
+  const data = rows.map(r => [
+    r.id, r.dt||'', r.title||'', r.pessoas??0,
+    r.valor_pessoa_cents??0, eurosFromCents(r.valor_pessoa_cents),
+    r.despesas_cents??0, eurosFromCents(r.despesas_cents)
+  ]);
   sendCsv(res, `jantares-${new Date().toISOString().slice(0,10)}.csv`, headers, data);
 });
 
@@ -199,170 +216,179 @@ router.get('/backup/export/casais.csv', requireAuth, (_req, res) => {
 });
 
 /* ----------------- export ZIP: todos CSVs + logo ----------------- */
-router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
-  const logoPath = resolveLogoPath();
-  res.setHeader('Content-Type', 'application/zip');
-  res.setHeader('Content-Disposition', `attachment; filename="csv-todos-${new Date().toISOString().slice(0,10)}.zip"`);
+router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res, next) => {
+  try {
+    const logoPath = resolveLogoPath();
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="csv-todos-${new Date().toISOString().slice(0,10)}.zip"`);
 
-  const archive = archiver('zip', { zlib: { level: 9 }});
-  archive.on('error', err => { throw err; });
-  archive.pipe(res);
+    const archive = archiver('zip', { zlib: { level: 9 }});
+    archive.on('error', err => { throw err; });
+    archive.pipe(res);
 
-  // helper para gerar CSV em memória e anexar
-  const addCsv = (name, headers, rows) => {
-    const escape = (v) => {
-      if (v === null || v === undefined) return '';
-      const s = String(v);
-      const needsQuote = /[;"\r\n]/.test(s) || /^[=+\-@]/.test(s);
-      return needsQuote ? `"${s.replace(/"/g,'""')}"` : s;
+    // helper para gerar CSV em memória e anexar
+    const addCsv = (name, headers, rows) => {
+      const escape = (v) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        const needsQuote = /[;"\r\n]/.test(s) || /^[=+\-@]/.test(s);
+        return needsQuote ? `"${s.replace(/"/g,'""')}"` : s;
+      };
+      const lines = ['sep=;', headers.map(escape).join(';'), ...rows.map(r => r.map(escape).join(';'))];
+      archive.append(lines.join('\r\n'), { name });
     };
-    const lines = ['sep=;', headers.map(escape).join(';'), ...rows.map(r => r.map(escape).join(';'))];
-    archive.append(lines.join('\r\n'), { name });
-  };
 
-  // movimentos
-  {
-    const rows = db.prepare(`
-      SELECT m.id, m.dt, c.type, c.name AS categoria, m.descr, m.valor_cents
-      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-      ORDER BY date(m.dt) DESC, m.id DESC
-    `).all();
-    const headers = ['id','dt','type','categoria','descr','valor_cents','valor_euros'];
-    const data = rows.map(r => [r.id, r.dt||'', r.type||'', r.categoria||'', r.descr||'', r.valor_cents??0, eurosFromCents(r.valor_cents)]);
-    addCsv('movimentos.csv', headers, data);
-  }
-  // jantares
-  {
-    const rows = db.prepare(`SELECT id, dt, pessoas, valor_pessoa_cents, despesas_cents FROM jantares ORDER BY date(dt) DESC, id DESC`).all();
-    const headers = ['id','dt','pessoas','valor_pessoa_cents','valor_pessoa_euros','despesas_cents','despesas_euros'];
-    const data = rows.map(r => [r.id, r.dt||'', r.pessoas??0, r.valor_pessoa_cents??0, eurosFromCents(r.valor_pessoa_cents), r.despesas_cents??0, eurosFromCents(r.despesas_cents)]);
-    addCsv('jantares.csv', headers, data);
-  }
-  // orcamento
-  {
-    const rows = db.prepare(`SELECT id, dt, descr, valor_cents, notas FROM orcamento_servicos ORDER BY date(dt) DESC, id DESC`).all();
-    const headers = ['id','dt','descr','valor_cents','valor_euros','notas'];
-    const data = rows.map(r => [r.id, r.dt||'', r.descr||'', r.valor_cents??0, eurosFromCents(r.valor_cents), r.notas||'']);
-    addCsv('orcamento.csv', headers, data);
-  }
-  // patrocinadores
-  {
-    const rows = db.prepare(`SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ FROM patrocinadores ORDER BY name COLLATE NOCASE`).all();
-    const headers = ['id','name','contacto','tipo','valor_prometido_cents','valor_prometido_euros','valor_entregue_cents','valor_entregue_euros','observ'];
-    const data = rows.map(r => [r.id, r.name||'', r.contacto||'', r.tipo||'', r.valor_prometido_cents??0, eurosFromCents(r.valor_prometido_cents), r.valor_entregue_cents??0, eurosFromCents(r.valor_entregue_cents), r.observ||'']);
-    addCsv('patrocinadores.csv', headers, data);
-  }
-  // peditorios
-  {
-    const rows = db.prepare(`SELECT id, dt, local, equipa, valor_cents, notas FROM peditorios ORDER BY date(dt) DESC, id DESC`).all();
-    const headers = ['id','dt','local','equipa','valor_cents','valor_euros','notas'];
-    const data = rows.map(r => [r.id, r.dt||'', r.local||'', r.equipa||'', r.valor_cents??0, eurosFromCents(r.valor_cents), r.notas||'']);
-    addCsv('peditorios.csv', headers, data);
-  }
-  // casais
-  {
-    const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
-    const headers = ['id','nome','valor_casa_cents','valor_casa_euros'];
-    const data = rows.map(r => [r.id, r.nome||'', r.valor_casa_cents??0, eurosFromCents(r.valor_casa_cents)]);
-    addCsv('casais.csv', headers, data);
-  }
+    // movimentos
+    {
+      const rows = db.prepare(`
+        SELECT m.id, m.dt, c.type, c.name AS categoria, m.descr, m.valor_cents
+        FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
+        ORDER BY date(m.dt) DESC, m.id DESC
+      `).all();
+      const headers = ['id','dt','type','categoria','descr','valor_cents','valor_euros'];
+      const data = rows.map(r => [r.id, r.dt||'', r.type||'', r.categoria||'', r.descr||'', r.valor_cents??0, eurosFromCents(r.valor_cents)]);
+      addCsv('movimentos.csv', headers, data);
+    }
+    // jantares
+    {
+      const rows = db.prepare(`SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents FROM jantares ORDER BY date(dt) DESC, id DESC`).all();
+      const headers = ['id','dt','title','pessoas','valor_pessoa_cents','valor_pessoa_euros','despesas_cents','despesas_euros'];
+      const data = rows.map(r => [r.id, r.dt||'', r.title||'', r.pessoas??0, r.valor_pessoa_cents??0, eurosFromCents(r.valor_pessoa_cents), r.despesas_cents??0, eurosFromCents(r.despesas_cents)]);
+      addCsv('jantares.csv', headers, data);
+    }
+    // orcamento
+    {
+      const rows = db.prepare(`SELECT id, dt, descr, valor_cents, notas FROM orcamento_servicos ORDER BY date(dt) DESC, id DESC`).all();
+      const headers = ['id','dt','descr','valor_cents','valor_euros','notas'];
+      const data = rows.map(r => [r.id, r.dt||'', r.descr||'', r.valor_cents??0, eurosFromCents(r.valor_cents), r.notas||'']);
+      addCsv('orcamento.csv', headers, data);
+    }
+    // patrocinadores
+    {
+      const rows = db.prepare(`SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ FROM patrocinadores ORDER BY name COLLATE NOCASE`).all();
+      const headers = ['id','name','contacto','tipo','valor_prometido_cents','valor_prometido_euros','valor_entregue_cents','valor_entregue_euros','observ'];
+      const data = rows.map(r => [r.id, r.name||'', r.contacto||'', r.tipo||'', r.valor_prometido_cents??0, eurosFromCents(r.valor_prometido_cents), r.valor_entregue_cents??0, eurosFromCents(r.valor_entregue_cents), r.observ||'']);
+      addCsv('patrocinadores.csv', headers, data);
+    }
+    // peditorios
+    {
+      const rows = db.prepare(`SELECT id, dt, local, equipa, valor_cents, notas FROM peditorios ORDER BY date(dt) DESC, id DESC`).all();
+      const headers = ['id','dt','local','equipa','valor_cents','valor_euros','notas'];
+      const data = rows.map(r => [r.id, r.dt||'', r.local||'', r.equipa||'', r.valor_cents??0, eurosFromCents(r.valor_cents), r.notas||'']);
+      addCsv('peditorios.csv', headers, data);
+    }
+    // casais
+    {
+      const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
+      const headers = ['id','nome','valor_casa_cents','valor_casa_euros'];
+      const data = rows.map(r => [r.id, r.nome||'', r.valor_casa_cents??0, eurosFromCents(r.valor_casa_cents)]);
+      addCsv('casais.csv', headers, data);
+    }
 
-  // adiciona o logo
-  if (logoPath) {
-    const ext = path.extname(logoPath).toLowerCase();
-    const name = ext === '.png' ? 'logo.png' : 'logo' + ext;
-    archive.file(logoPath, { name });
-  }
+    // adiciona o logo (se existir)
+    const logoPath = resolveLogoPath();
+    if (logoPath) {
+      const ext = path.extname(logoPath).toLowerCase();
+      const name = ext === '.png' ? 'logo.png' : 'logo' + ext;
+      archive.file(logoPath, { name });
+    }
 
-  await archive.finalize();
+    await archive.finalize();
+  } catch (e) {
+    next(e);
+  }
 });
 
 /* ----------------- export XLSX: várias folhas + logo na capa ----------------- */
-router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
-  const logoPath = resolveLogoPath();
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Festa App';
-  wb.created = new Date();
+router.get('/backup/export.xlsx', requireAuth, async (_req, res, next) => {
+  try {
+    const logoPath = resolveLogoPath();
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Festa App';
+    wb.created = new Date();
 
-  // capa
-  const ws0 = wb.addWorksheet('Capa');
-  ws0.getCell('A2').value = 'Comissão de Festas';
-  ws0.getCell('A3').value = 'Backup de dados';
-  ws0.getCell('A5').value = `Gerado em: ${new Date().toLocaleString('pt-PT')}`;
-  ws0.getColumn(1).width = 40;
-  ws0.getRow(2).font = { size: 18, bold: true };
-  ws0.getRow(3).font = { size: 14 };
-  if (logoPath) {
-    const ext = path.extname(logoPath).toLowerCase().replace('.','');
-    const imgId = wb.addImage({ filename: logoPath, extension: ext === 'jpg' ? 'jpeg' : ext });
-    ws0.addImage(imgId, { tl: { col: 6, row: 0 }, ext: { width: 180, height: 180 } });
-  }
+    // capa
+    const ws0 = wb.addWorksheet('Capa');
+    ws0.getCell('A2').value = 'Comissão de Festas';
+    ws0.getCell('A3').value = 'Backup de dados';
+    ws0.getCell('A5').value = `Gerado em: ${new Date().toLocaleString('pt-PT')}`;
+    ws0.getColumn(1).width = 40;
+    ws0.getRow(2).font = { size: 18, bold: true };
+    ws0.getRow(3).font = { size: 14 };
+    if (logoPath) {
+      const ext = path.extname(logoPath).toLowerCase().replace('.','');
+      const imgId = wb.addImage({ filename: logoPath, extension: ext === 'jpg' ? 'jpeg' : ext });
+      ws0.addImage(imgId, { tl: { col: 6, row: 0 }, ext: { width: 180, height: 180 } });
+    }
 
-  // helper para criar sheet
-  function addSheet(name, headers, rows) {
-    const ws = wb.addWorksheet(name);
-    ws.views = [{ state: 'frozen', ySplit: 1 }];
-    ws.addRow(headers);
-    ws.getRow(1).font = { bold: true };
-    for (const r of rows) ws.addRow(r);
-    // autosize
-    headers.forEach((h, i) => {
-      let max = h.length;
-      for (const row of rows) {
-        const v = row[i] == null ? '' : String(row[i]);
-        if (v.length > max) max = Math.min(v.length, 60);
-      }
-      ws.getColumn(i + 1).width = Math.max(10, Math.min(max + 2, 60));
-    });
-  }
+    // helper para criar sheet
+    function addSheet(name, headers, rows) {
+      const ws = wb.addWorksheet(name);
+      ws.views = [{ state: 'frozen', ySplit: 1 }];
+      ws.addRow(headers);
+      ws.getRow(1).font = { bold: true };
+      for (const r of rows) ws.addRow(r);
+      // autosize
+      headers.forEach((h, i) => {
+        let max = h.length;
+        for (const row of rows) {
+          const v = row[i] == null ? '' : String(row[i]);
+          if (v.length > max) max = Math.min(v.length, 60);
+        }
+        ws.getColumn(i + 1).width = Math.max(10, Math.min(max + 2, 60));
+      });
+    }
 
-  // folhas
-  {
-    const rows = db.prepare(`
-      SELECT m.id, m.dt, c.type, c.name AS categoria, m.descr, m.valor_cents
-      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-      ORDER BY date(m.dt) DESC, m.id DESC
-    `).all();
-    const headers = ['id','dt','type','categoria','descr','valor_cents','valor_euros'];
-    const data = rows.map(r => [r.id, r.dt||'', r.type||'', r.categoria||'', r.descr||'', r.valor_cents??0, eurosFromCents(r.valor_cents)]);
-    addSheet('Movimentos', headers, data);
-  }
-  {
-    const rows = db.prepare(`SELECT id, dt, pessoas, valor_pessoa_cents, despesas_cents FROM jantares ORDER BY date(dt) DESC, id DESC`).all();
-    const headers = ['id','dt','pessoas','valor_pessoa_cents','valor_pessoa_euros','despesas_cents','despesas_euros'];
-    const data = rows.map(r => [r.id, r.dt||'', r.pessoas??0, r.valor_pessoa_cents??0, eurosFromCents(r.valor_pessoa_cents), r.despesas_cents??0, eurosFromCents(r.despesas_cents)]);
-    addSheet('Jantares', headers, data);
-  }
-  {
-    const rows = db.prepare(`SELECT id, dt, descr, valor_cents, notas FROM orcamento_servicos ORDER BY date(dt) DESC, id DESC`).all();
-    const headers = ['id','dt','descr','valor_cents','valor_euros','notas'];
-    const data = rows.map(r => [r.id, r.dt||'', r.descr||'', r.valor_cents??0, eurosFromCents(r.valor_cents), r.notas||'']);
-    addSheet('Orcamento', headers, data);
-  }
-  {
-    const rows = db.prepare(`SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ FROM patrocinadores ORDER BY name COLLATE NOCASE`).all();
-    const headers = ['id','name','contacto','tipo','valor_prometido_cents','valor_prometido_euros','valor_entregue_cents','valor_entregue_euros','observ'];
-    const data = rows.map(r => [r.id, r.name||'', r.contacto||'', r.tipo||'', r.valor_prometido_cents??0, eurosFromCents(r.valor_prometido_cents), r.valor_entregue_cents??0, eurosFromCents(r.valor_entregue_cents), r.observ||'']);
-    addSheet('Patrocinadores', headers, data);
-  }
-  {
-    const rows = db.prepare(`SELECT id, dt, local, equipa, valor_cents, notas FROM peditorios ORDER BY date(dt) DESC, id DESC`).all();
-    const headers = ['id','dt','local','equipa','valor_cents','valor_euros','notas'];
-    const data = rows.map(r => [r.id, r.dt||'', r.local||'', r.equipa||'', r.valor_cents??0, eurosFromCents(r.valor_cents), r.notas||'']);
-    addSheet('Peditorios', headers, data);
-  }
-  {
-    const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
-    const headers = ['id','nome','valor_casa_cents','valor_casa_euros'];
-    const data = rows.map(r => [r.id, r.nome||'', r.valor_casa_cents??0, eurosFromCents(r.valor_casa_cents)]);
-    addSheet('Casais', headers, data);
-  }
+    // folhas
+    {
+      const rows = db.prepare(`
+        SELECT m.id, m.dt, c.type, c.name AS categoria, m.descr, m.valor_cents
+        FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
+        ORDER BY date(m.dt) DESC, m.id DESC
+      `).all();
+      const headers = ['id','dt','type','categoria','descr','valor_cents','valor_euros'];
+      const data = rows.map(r => [r.id, r.dt||'', r.type||'', r.categoria||'', r.descr||'', r.valor_cents??0, eurosFromCents(r.valor_cents)]);
+      addSheet('Movimentos', headers, data);
+    }
+    {
+      const rows = db.prepare(`SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents FROM jantares ORDER BY date(dt) DESC, id DESC`).all();
+      const headers = ['id','dt','title','pessoas','valor_pessoa_cents','valor_pessoa_euros','despesas_cents','despesas_euros'];
+      const data = rows.map(r => [r.id, r.dt||'', r.title||'', r.pessoas??0, r.valor_pessoa_cents??0, eurosFromCents(r.valor_pessoa_cents), r.despesas_cents??0, eurosFromCents(r.despesas_cents)]);
+      addSheet('Jantares', headers, data);
+    }
+    {
+      const rows = db.prepare(`SELECT id, dt, descr, valor_cents, notas FROM orcamento_servicos ORDER BY date(dt) DESC, id DESC`).all();
+      const headers = ['id','dt','descr','valor_cents','valor_euros','notas'];
+      const data = rows.map(r => [r.id, r.dt||'', r.descr||'', r.valor_cents??0, eurosFromCents(r.valor_cents), r.notas||'']);
+      addSheet('Orcamento', headers, data);
+    }
+    {
+      const rows = db.prepare(`SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ FROM patrocinadores ORDER BY name COLLATE NOCASE`).all();
+      const headers = ['id','name','contacto','tipo','valor_prometido_cents','valor_prometido_euros','valor_entregue_cents','valor_entregue_euros','observ'];
+      const data = rows.map(r => [r.id, r.name||'', r.contacto||'', r.tipo||'', r.valor_prometido_cents??0, eurosFromCents(r.valor_prometido_cents), r.valor_entregue_cents??0, eurosFromCents(r.valor_entregue_cents), r.observ||'']);
+      addSheet('Patrocinadores', headers, data);
+    }
+    {
+      const rows = db.prepare(`SELECT id, dt, local, equipa, valor_cents, notas FROM peditorios ORDER BY date(dt) DESC, id DESC`).all();
+      const headers = ['id','dt','local','equipa','valor_cents','valor_euros','notas'];
+      const data = rows.map(r => [r.id, r.dt||'', r.local||'', r.equipa||'', r.valor_cents??0, eurosFromCents(r.valor_cents), r.notas||'']);
+      addSheet('Peditorios', headers, data);
+    }
+    {
+      const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
+      const headers = ['id','nome','valor_casa_cents','valor_casa_euros'];
+      const data = rows.map(r => [r.id, r.nome||'', r.valor_casa_cents??0, eurosFromCents(r.valor_casa_cents)]);
+      addSheet('Casais', headers, data);
+    }
 
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="backup-festa-${new Date().toISOString().slice(0,10)}.xlsx"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="backup-festa-${new Date().toISOString().slice(0,10)}.xlsx"`);
 
-  await wb.xlsx.write(res);
-  res.end();
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (e) {
+    next(e);
+  }
 });
 
 export default router;
