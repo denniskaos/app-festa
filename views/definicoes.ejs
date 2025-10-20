@@ -1,24 +1,35 @@
+<!-- views/definicoes.ejs -->
 <div class="toolbar">
   <h1>Definições</h1>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn btn-light" href="/dashboard">← Voltar</a>
+    <a class="btn" href="/definicoes/rodizio">Rodízio (casais)</a>
+  </div>
 </div>
 
+<% if (err) { %>
+  <div class="alert"><%= err %></div>
+<% } %>
+<% if (msg) { %>
+  <div class="alert success"><%= msg %></div>
+<% } %>
+
+<!-- ================== Branding / UI ================== -->
 <section class="card">
-  <h3>Identidade / Aparência</h3>
+  <h3>Branding & UI</h3>
   <form method="post" action="/definicoes" class="form-grid">
     <% KEYS.forEach(k => { %>
       <label><%= k.label %>
         <input type="<%= k.type %>" name="<%= k.key %>" value="<%= map[k.key] || '' %>" />
       </label>
     <% }) %>
-    <button class="btn">Guardar</button>
+    <button class="btn btn-primary">Guardar</button>
   </form>
 </section>
 
+<!-- ================== O meu perfil ================== -->
 <section class="card" style="margin-top:12px">
   <h3>O meu perfil</h3>
-  <% if (err) { %><div class="alert"><%= err %></div><% } %>
-  <% if (msg) { %><div class="alert success"><%= msg %></div><% } %>
-
   <form method="post" action="/definicoes/perfil" class="form-grid">
     <label>Nome
       <input name="name" value="<%= me.name %>" required>
@@ -42,90 +53,11 @@
   </form>
 </section>
 
-<!-- ================== Rodízio (Casais) ================== -->
-<%
-  // valores seguros para a secção do rodízio
-  const blocoCents   = Number(map.rodizio_bloco_cents ?? 500000);
-  const blocoEuros   = (blocoCents/100).toFixed(2);
-  const inicioId     = map.rodizio_inicio_casal_id || '';
-  const aplicados    = Number(map.rodizio_blocks_aplicados ?? 0);
-
-  const R = rodizioResumo || {
-    totalCasaCents: 0,
-    blocoCents: blocoCents,
-    blocosCompletos: 0,
-    restoCents: 0,
-    blocksAplicados: aplicados,
-    novos: 0
-  };
-%>
-
-<section id="rodizio" class="card" style="margin-top:12px">
-  <h3>Rodízio (Casais)</h3>
-
-  <p class="muted" style="margin-top:-6px">
-    Quando as <strong>receitas líquidas acumuladas</strong> em casa dos casais atingem o valor do bloco,
-    esse bloco é atribuído a um casal segundo a ordem definida (rodízio).
+<!-- ================== Rodízio (atalho) ================== -->
+<section class="card" style="margin-top:12px">
+  <h3>Rodízio (casais)</h3>
+  <p class="muted" style="margin:6px 0 12px">
+    Define o tamanho do bloco, vê o resto disponível e aplica valores a casais.
   </p>
-
-  <form method="post" action="/definicoes/rodizio" class="form-grid">
-    <label>Valor por bloco (€)
-      <input type="number" step="0.01" min="0" name="rodizio_bloco_euros" value="<%= blocoEuros %>" required>
-    </label>
-
-    <label>Início da sequência
-      <select name="rodizio_inicio_casal_id">
-        <option value="" <%= inicioId ? '' : 'selected' %>>(primeiro da lista)</option>
-        <% (casais || []).forEach(c => { %>
-          <option value="<%= c.id %>" <%= (String(inicioId)===String(c.id)) ? 'selected' : '' %>><%= c.nome %></option>
-        <% }) %>
-      </select>
-    </label>
-
-    <label>Blocos já aplicados
-      <input type="number" name="rodizio_blocks_aplicados" min="0" step="1" value="<%= aplicados %>">
-      <small class="muted">Normalmente não precisas mexer. Usa apenas para corrigir histórico.</small>
-    </label>
-
-    <div style="grid-column:1/-1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <button class="btn">Guardar rodízio</button>
-
-      <!-- reset aplica apenas aos “aplicados” -->
-      <form method="post" action="/definicoes/rodizio/reset" style="display:inline" onsubmit="return confirm('Colocar “blocos aplicados” a zero?');">
-        <button class="btn btn-light" type="submit">Repor “aplicados” a 0</button>
-      </form>
-    </div>
-  </form>
-
-  <div class="cards" style="margin-top:10px">
-    <div class="card stat">
-      <div class="stat-number">€ <%= (R.totalCasaCents/100).toFixed(2) %></div>
-      <div class="stat-label">Total em casa (casais)</div>
-    </div>
-    <div class="card stat">
-      <div class="stat-number">€ <%= (R.blocoCents/100).toFixed(2) %></div>
-      <div class="stat-label">Bloco</div>
-    </div>
-    <div class="card stat">
-      <div class="stat-number"><%= R.blocosCompletos %></div>
-      <div class="stat-label">Blocos completos</div>
-    </div>
-    <div class="card stat">
-      <div class="stat-number">€ <%= (R.restoCents/100).toFixed(2) %></div>
-      <div class="stat-label">Resto</div>
-    </div>
-    <div class="card stat">
-      <div class="stat-number"><%= R.blocksAplicados %></div>
-      <div class="stat-label">Aplicados</div>
-    </div>
-    <div class="card stat">
-      <div class="stat-number"><%= R.novos %></div>
-      <div class="stat-label">Novos por aplicar</div>
-    </div>
-  </div>
-
-  <p class="muted" style="margin-top:8px">
-    Para <strong>aplicar os blocos</strong> (transferir para um casal segundo a ordem de rodízio),
-    usa a página <a href="/casais/rodizio">Casais → Rodízio</a>.
-  </p>
+  <a class="btn btn-primary" href="/definicoes/rodizio">Abrir rodízio</a>
 </section>
