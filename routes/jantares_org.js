@@ -50,6 +50,18 @@ function getJantarOr404(id) {
   return j;
 }
 
+// Para cabeçalhos/UX: usa título se existir, senão data, senão “Jantar #id”
+function etiquetaJantar(j) {
+  const t = (j.title || '').trim();
+  return t || j.dt || `Jantar #${j.id}`;
+}
+
+// Para movimentos: prefixo explícito “Jantar — …”
+function labelMovBase(j) {
+  const core = (j.title || '').trim() || j.dt || `#${j.id}`;
+  return `Jantar — ${core}`;
+}
+
 function navUrls(jantar_id) {
   return {
     base: `/jantares/${jantar_id}/organizar`,
@@ -67,7 +79,6 @@ function ensureCategoriaMulti(names, type /* 'receita' | 'despesa' */) {
     const row = db.prepare(`SELECT id FROM categorias WHERE name=? AND type=?`).get(name, type);
     if (row?.id) return Number(row.id);
   }
-  // cria com a primeira grafia
   const ins = db.prepare(`INSERT INTO categorias (name, type, planned_cents) VALUES (?,?,0)`)
     .run(names[0], type);
   return Number(ins.lastInsertRowid);
@@ -114,17 +125,22 @@ function insertMovimentoIfNotExists({ dt, categoria_id, descr, valor_cents }) {
   return Number(db.prepare(`SELECT last_insert_rowid() AS id`).get().id);
 }
 
-// Verifica se já foi lançado (procura a receita com o marcador (ID:x))
+// Já foi lançado? (aceita formato novo “Jantar — … — Receita”, o anterior “<titulo> — Receita” e o antigo com “(ID:x)”)
 function isLancado(j) {
   const catReceitaId = ensureCategoriaMulti(['Jantares'], 'receita');
+  const dtMov = j.dt || null;
+  const descrNew = `${labelMovBase(j)} — Receita`;
+  const descrOld = `${etiquetaJantar(j)} — Receita`;
   const marker = `(ID:${j.id})`;
+
   const row = db.prepare(`
     SELECT 1 AS ok
     FROM movimentos
     WHERE categoria_id = ?
-      AND descr LIKE ?
+      AND dt IS ?
+      AND (descr = ? OR descr = ? OR descr LIKE ?)
     LIMIT 1
-  `).get(catReceitaId, `%${marker}%`);
+  `).get(catReceitaId, dtMov, descrNew, descrOld, `%${marker}%`);
   return !!row?.ok;
 }
 
@@ -148,7 +164,7 @@ router.get('/jantares/:id/organizar', requireAuth, (req, res, next) => {
     `).get(j.id).c;
 
     res.render('jantares_org', {
-      title: `Organizar — ${j.dt || 'Jantar #' + j.id}`,
+      title: `Organizar — ${etiquetaJantar(j)}`,
       j: { ...j, lancado: isLancado(j) },
       mesas,
       totConvidados,
@@ -380,10 +396,12 @@ function lancarMovimentos(j) {
   const catReceitaId = ensureCategoriaMulti(['Jantares'], 'receita');
   const catDespesaId = ensureCategoriaMulti(['Jantares — Despesas', 'Jantares — Despesa'], 'despesa');
 
-  // Receita (com marcador único de ID no descr)
+  const label = labelMovBase(j); // <<< sempre “Jantar — …”
+
+  // Receita
   const receita_cents = receitaPorJantarCents(j);
   if (receita_cents > 0) {
-    const descrR = `Jantar ${j.dt || ('#' + j.id)} (ID:${j.id}) — Receita`;
+    const descrR = `${label} — Receita`;
     insertMovimentoIfNotExists({
       dt: dtMov,
       categoria_id: catReceitaId,
@@ -401,7 +419,7 @@ function lancarMovimentos(j) {
 
   for (const ln of linhas) {
     if (!ln.valor_cents) continue;
-    const descrD = `Jantar ${j.dt || ('#' + j.id)} (ID:${j.id}) — ${ln.descr}`;
+    const descrD = `${label} — ${ln.descr}`;
     insertMovimentoIfNotExists({
       dt: dtMov,
       categoria_id: catDespesaId,
@@ -422,7 +440,7 @@ function handleLancar(req, res, next) {
     const resumo = lancarMovimentos(j);
     // 303 para não re-submeter o POST ao voltar
     return res.redirect(303, `/movimentos?msg=${encodeURIComponent(
-      `Movimentos lançados do jantar ${j.dt || '#'+j.id}: receita € ${(resumo.receita_cents/100).toFixed(2)} e despesas € ${(resumo.despesas_cents/100).toFixed(2)}`
+      `Movimentos lançados: ${labelMovBase(j)} — receita € ${(resumo.receita_cents/100).toFixed(2)} e despesas € ${(resumo.despesas_cents/100).toFixed(2)}`
     )}`);
   } catch (e) { next(e); }
 }

@@ -1,9 +1,35 @@
-<h1>Novo Jantar</h1>
-<form method="post" action="/jantares" class="card" style="padding:12px">
-  <label>Data <input name="dt" type="date"></label><br>
-  <label>Pessoas <input name="pessoas" type="number" min="0" step="1"></label><br>
-  <label>Valor por pessoa (€) <input name="valor_pessoa" type="text" placeholder="ex.: 12,50"></label><br>
-  <label>Despesas (€) <input name="despesas" type="text" placeholder="ex.: 150,00"></label><br>
-  <button class="btn">Guardar</button>
-  <a class="btn btn-light" href="/jantares">Cancelar</a>
-</form>
+<div class="toolbar">
+  <h1>Novo Jantar</h1>
+  <div style="margin-left:auto">
+    <a class="btn btn-light" href="/jantares">Voltar</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="post" action="/jantares" class="form-grid">
+    <label>Título
+      <input name="title" placeholder="ex.: Jantar de Arroz de Pato">
+    </label>
+
+    <label>Data
+      <input type="date" name="dt">
+    </label>
+
+    <label>N.º de pessoas
+      <input type="number" min="0" inputmode="numeric" name="pessoas" value="0">
+    </label>
+
+    <label>Valor por pessoa (€)
+      <input name="valor_pessoa" inputmode="decimal" placeholder="0,00">
+    </label>
+
+    <label>Despesas totais (€)
+      <input name="despesas" inputmode="decimal" placeholder="0,00">
+    </label>
+
+    <div style="grid-column:1/-1;display:flex;gap:8px">
+      <button class="btn">Criar</button>
+      <a class="btn btn-light" href="/jantares">Cancelar</a>
+    </div>
+  </form>
+</div>
