@@ -1,16 +1,13 @@
+<% const tituloJantar = (j.title && j.title.trim()) || j.dt || ('Jantar #' + j.id); %>
 <div class="toolbar">
-  <a class="btn btn-secondary"
-     href="/jantares"
-     onclick="if(document.referrer && new URL(document.referrer).origin===location.origin){history.back();return false;}"
-     aria-label="Voltar">Voltar</a>
-
-  <h1>Convidados — <%= j.dt || ('Jantar #' + j.id) %></h1>
+  <h1>Convidados — <%= tituloJantar %></h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn" href="<%= urls.base %>">Organizar</a>
     <a class="btn" href="<%= urls.mesas %>">Mesas</a>
     <a class="btn btn-primary" href="<%= urls.print %>">Imprimir</a>
   </div>
 </div>
+
 
 
 <div class="cards" style="margin-bottom:12px;">
