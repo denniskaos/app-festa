@@ -94,136 +94,92 @@ router.post('/definicoes/perfil', requireAuth, (req, res) => {
   res.redirect('/definicoes?msg=Perfil+atualizado');
 });
 
-/* ===================== RODÍZIO (com a FÓRMULA pedida) ===================== */
+/* ===================== RODÍZIO (Definições) ===================== */
 
-// helper simples de euros (para a view)
+// helper simples de euros
 function euros(centsValue) {
   return ((centsValue || 0) / 100).toFixed(2);
 }
 
-// coluna preco_cents existe?
-const HAS_PRECO_COL = (() => {
-  try {
-    const cols = db.prepare(`PRAGMA table_info('jantares_convidados')`).all().map(c => c.name);
-    return cols.includes('preco_cents');
-  } catch { return false; }
-})();
-
-// receita de um jantar (considera overrides por convidado quando existirem)
-function receitaJantarCents(j) {
+// Receita por jantar (considera override por convidado ou valor base)
+function receitaPorJantarCents(j) {
   const base = j.valor_pessoa_cents || 0;
-  if (HAS_PRECO_COL) {
-    const agg = db.prepare(`
-      SELECT COUNT(*) AS n, COALESCE(SUM(COALESCE(preco_cents, ?)), 0) AS s
-      FROM jantares_convidados
-      WHERE jantar_id=?
-    `).get(base, j.id);
-    if (!agg || !agg.n) return (j.pessoas || 0) * base;
-    return agg.s || 0;
-  }
-  // fallback sem coluna preco_cents
-  const n = db.prepare(`SELECT COUNT(*) AS n FROM jantares_convidados WHERE jantar_id=?`).get(j.id)?.n || 0;
-  return (n ? n : (j.pessoas || 0)) * base;
+  const agg = db.prepare(`
+    SELECT COUNT(*) AS n,
+           COALESCE(SUM(COALESCE(preco_cents, ?)), 0) AS s
+    FROM jantares_convidados
+    WHERE jantar_id=?
+  `).get(base, j.id);
+  if (!agg || !agg.n) return (j.pessoas || 0) * base;
+  return agg.s || 0;
 }
 
-// Heurística para saber se um jantar já foi lançado aos movimentos (receita):
-// 1) descr contém "(ID:<id>)", OU
-// 2) tem título -> descr LIKE '%Jantar%<title>%Receita%' em categoria type='receita', OU
-// 3) tem data    -> descr LIKE '%Jantar%<dt>%Receita%'   em categoria type='receita'
-function isJantarLancado(j) {
-  // 1) marcador por ID
-  const rowById = db.prepare(`
-    SELECT m.id
-    FROM movimentos m
-    JOIN categorias c ON c.id=m.categoria_id
-    WHERE c.type='receita'
-      AND m.descr LIKE ?
-    LIMIT 1
-  `).get(`%(ID:${j.id})%`);
-  if (rowById?.id) return true;
-
-  // 2) por título
-  if (j.title && j.title.trim()) {
-    const r = db.prepare(`
-      SELECT m.id
-      FROM movimentos m
-      JOIN categorias c ON c.id=m.categoria_id
-      WHERE c.type='receita'
-        AND m.descr LIKE ?
-      LIMIT 1
-    `).get(`%Jantar%${j.title.trim()}%Receita%`);
-    if (r?.id) return true;
+// retorna um Set com IDs de jantares já lançados (descr tem "(ID:x)")
+function launchedJantaresSet() {
+  const rows = db.prepare(`SELECT descr FROM movimentos WHERE descr LIKE '%(ID:%'`).all();
+  const set = new Set();
+  for (const r of rows) {
+    const m = /\(ID:(\d+)\)/.exec(r.descr || '');
+    if (m) set.add(Number(m[1]));
   }
-
-  // 3) por data
-  if (j.dt && String(j.dt).trim()) {
-    const r = db.prepare(`
-      SELECT m.id
-      FROM movimentos m
-      JOIN categorias c ON c.id=m.categoria_id
-      WHERE c.type='receita'
-        AND m.descr LIKE ?
-      LIMIT 1
-    `).get(`%Jantar%${String(j.dt).trim()}%Receita%`);
-    if (r?.id) return true;
-  }
-
-  return false;
+  return set;
 }
 
-// GET /definicoes/rodizio  (tudo calculado com a tua fórmula)
+// GET /definicoes/rodizio
 router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
     const settings = ensureSettingsRow();
 
-    // ---- Totais "em casa" (casais) ----
+    // Auxiliares base
     const casais = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
     const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
 
-    // ---- Saldo movimentos = receitas − despesas + peditórios + patrocínios ENTREGUES ----
-    const movAgg = db.prepare(`
-      SELECT
-        IFNULL(SUM(CASE WHEN c.type='receita' THEN m.valor_cents ELSE 0 END),0) AS receitas,
-        IFNULL(SUM(CASE WHEN c.type='despesa' THEN m.valor_cents ELSE 0 END),0)  AS despesas
-      FROM movimentos m
-      JOIN categorias c ON c.id=m.categoria_id
-    `).get();
-    const movReceitas  = movAgg?.receitas || 0;
-    const movDespesas  = movAgg?.despesas || 0;
-    const pedSum       = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s || 0;
-    const patEntregue  = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s || 0;
+    // Movimentos / saldos (inclui Peditórios + Patrocínios entregues)
+    const movReceitas  = db.prepare(`
+      SELECT IFNULL(SUM(m.valor_cents),0) AS s
+      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
+      WHERE c.type='receita'
+    `).get().s;
+    const movDespesas  = db.prepare(`
+      SELECT IFNULL(SUM(m.valor_cents),0) AS s
+      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
+      WHERE c.type='despesa'
+    `).get().s;
+    const pedSum       = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s;
+    const patEntregue  = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s;
 
     const saldoMovimentosCents = (movReceitas - movDespesas) + pedSum + patEntregue;
 
-    // ---- Lucro projetado dos jantares pendentes ----
+    // Lucro projetado de jantares pendentes (ainda não lançados)
+    const lancados = launchedJantaresSet();
     const jantares = db.prepare(`
-      SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents
+      SELECT id, dt, pessoas, valor_pessoa_cents, despesas_cents, COALESCE(title,'') AS title
       FROM jantares
-      ORDER BY COALESCE(dt,'9999-99-99') DESC, id DESC
     `).all();
 
     let lucroProjetadoPendentesCents = 0;
     for (const j of jantares) {
-      const lancado = isJantarLancado(j);
-      if (!lancado) {
-        const receita = receitaJantarCents(j);
-        const lucro   = receita - (j.despesas_cents || 0);
-        lucroProjetadoPendentesCents += lucro;
-      }
+      if (lancados.has(j.id)) continue; // já lançado → não entra na projeção
+      const receita = receitaPorJantarCents(j);
+      const lucro   = receita - (j.despesas_cents || 0);
+      lucroProjetadoPendentesCents += lucro;
     }
 
-    // ---- Saldo projetado ----
+    // Saldos/projeções
     const saldoProjetadoCents = saldoMovimentosCents + lucroProjetadoPendentesCents;
 
-    // ---- Resto teórico / disponível (com aplicações parciais) ----
-    const restoTeoricoCents = Math.max(0, saldoProjetadoCents - (totalCasaCents || 0));
-    const aplicadoRestoCents = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s || 0;
-    const restoDisponivelCents = Math.max(0, restoTeoricoCents - aplicadoRestoCents);
+    // RESTOS
+    // - Resto teórico: inclui a projeção (informativo)
+    const restoTeoricoCents = Math.max(0, saldoProjetadoCents - totalCasaCents);
 
-    // (mantemos também blocos do rodízio na settings, caso a tua view ainda mostre)
-    const blocoCents = Number(settings.rodizio_bloco_cents ?? 500000);
-    const blocosCompletos = blocoCents > 0 ? Math.floor((totalCasaCents || 0) / blocoCents) : 0;
-    const blocksAplicados = Number(settings.rodizio_blocks_aplicados ?? 0);
+    // - Aplicado até agora (aplicações manuais do resto)
+    const aplicadoRestoCents = db.prepare(`
+      SELECT IFNULL(SUM(valor_cents),0) AS s
+      FROM rodizio_aplicacoes
+    `).get().s;
+
+    // - Resto disponível (real): NÃO inclui a projeção (o que está mesmo disponível)
+    const restoDisponivelCents = Math.max(0, (saldoMovimentosCents - totalCasaCents) - aplicadoRestoCents);
 
     // histórico das aplicações
     const historico = db.prepare(`
@@ -239,29 +195,18 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
       casais,
       euros,
       resumo: {
-        // breakdown do saldo movimentos
-        movReceitas,
-        movDespesas,
-        pedSum,
-        patEntregue,
+        // breakdown
+        movReceitas, movDespesas, pedSum, patEntregue,
+        // saldos
         saldoMovimentosCents,
-
-        // jantares
         lucroProjetadoPendentesCents,
         saldoProjetadoCents,
-
         // casais
         totalCasaCents,
-
-        // resto (tua fórmula)
+        // restos
         restoTeoricoCents,
         aplicadoRestoCents,
-        restoDisponivelCents,
-
-        // legacy/compat (se a view usar)
-        blocoCents,
-        blocosCompletos,
-        blocksAplicados
+        restoDisponivelCents
       },
       historico,
       msg: req.query.msg || null,
@@ -270,7 +215,7 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// POST /definicoes/rodizio  (ainda guarda bloco/início, para compatibilidade com a tua view)
+// POST /definicoes/rodizio  (guardar tamanho de bloco e início do rodízio)
 router.post('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
     const blocoEuros = String(req.body.bloco ?? '').trim();
@@ -299,42 +244,28 @@ router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
     if (!casal_id) return res.redirect('/definicoes/rodizio?err=Escolhe+um+casal');
     if (valor_cents <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
 
-    // recalcular resto disponível (para não permitir passar do limite)
-    const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s || 0;
-
-    const movAgg = db.prepare(`
-      SELECT
-        IFNULL(SUM(CASE WHEN c.type='receita' THEN m.valor_cents ELSE 0 END),0) AS receitas,
-        IFNULL(SUM(CASE WHEN c.type='despesa' THEN m.valor_cents ELSE 0 END),0)  AS despesas
-      FROM movimentos m
-      JOIN categorias c ON c.id=m.categoria_id
-    `).get();
-    const movReceitas  = movAgg?.receitas || 0;
-    const movDespesas  = movAgg?.despesas || 0;
-    const pedSum       = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s || 0;
-    const patEntregue  = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s || 0;
+    // recomputa o RESTO DISPONÍVEL (real), sem projeções
+    const movReceitas  = db.prepare(`
+      SELECT IFNULL(SUM(m.valor_cents),0) AS s
+      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
+      WHERE c.type='receita'
+    `).get().s;
+    const movDespesas  = db.prepare(`
+      SELECT IFNULL(SUM(m.valor_cents),0) AS s
+      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
+      WHERE c.type='despesa'
+    `).get().s;
+    const pedSum       = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s;
+    const patEntregue  = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s;
     const saldoMovimentosCents = (movReceitas - movDespesas) + pedSum + patEntregue;
 
-    const jantares = db.prepare(`
-      SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents
-      FROM jantares
-    `).all();
-    let lucroProjetadoPendentesCents = 0;
-    for (const j of jantares) {
-      if (!isJantarLancado(j)) {
-        const receita = receitaJantarCents(j);
-        const lucro   = receita - (j.despesas_cents || 0);
-        lucroProjetadoPendentesCents += lucro;
-      }
-    }
+    const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
+    const aplicadoRestoCents = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
 
-    const saldoProjetadoCents = saldoMovimentosCents + lucroProjetadoPendentesCents;
-    const restoTeoricoCents   = Math.max(0, saldoProjetadoCents - totalCasaCents);
-    const aplicadoRestoCents  = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s || 0;
-    const restoDisponivelCents= Math.max(0, restoTeoricoCents - aplicadoRestoCents);
+    const restoDisponivelCents = Math.max(0, (saldoMovimentosCents - totalCasaCents) - aplicadoRestoCents);
 
     if (valor_cents > restoDisponivelCents) {
-      return res.redirect('/definicoes/rodizio?err=Valor+excede+o+resto+disponível');
+      return res.redirect('/definicoes/rodizio?err=Valor+excede+o+resto+disponível+(real)');
     }
 
     db.prepare(`
