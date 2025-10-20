@@ -1,47 +1,96 @@
+<!-- views/backup.ejs -->
 <div class="toolbar">
-  <h1>Backup</h1>
+  <h1><%= typeof title !== 'undefined' ? title : 'Backup' %></h1>
+  <a class="btn btn-light" href="/dashboard" style="margin-left:auto">Voltar</a>
+</div>
+
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Base de dados</div>
+    <div class="stat-number" style="font-size:14px; line-height:1.2; word-break:break-all;">
+      <%= dbPath || '(caminho indisponível)' %>
+    </div>
+  </div>
 </div>
 
 <div class="card" style="margin-bottom:12px;">
-  <p>Exportações completas:</p>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+  <h3 style="margin-top:0">Exportar / Download rápido</h3>
+  <div class="actions-row" style="display:flex; flex-wrap:wrap; gap:8px;">
+    <a class="btn btn-primary" href="/backup/download" title="Download direto do ficheiro .db">Descarregar DB</a>
     <a class="btn" href="/backup/export.json">Exportar JSON</a>
-    <a class="btn btn-primary" href="/backup/export.sql">Exportar SQL</a>
+    <a class="btn" href="/backup/export.sql">Exportar SQL</a>
+    <a class="btn" href="/backup/export.xlsx">Exportar XLSX</a>
+    <a class="btn btn-light" href="/backup/export/all-csv.zip">ZIP: todos os CSVs</a>
   </div>
 </div>
 
 <div class="card" style="margin-bottom:12px;">
-  <h3>CSV por módulo</h3>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-    <a class="btn" href="/backup/export/movimentos.csv">Movimentos</a>
-    <a class="btn" href="/backup/export/jantares.csv">Jantares</a>
-    <a class="btn" href="/backup/export/orcamento.csv">Orçamento</a>
-    <a class="btn" href="/backup/export/patrocinadores.csv">Patrocinadores</a>
-    <a class="btn" href="/backup/export/peditorios.csv">Peditórios</a>
-    <a class="btn" href="/backup/export/casais.csv">Casais</a>
+  <h3 style="margin-top:0">CSV rápidos</h3>
+  <div class="actions-row" style="display:flex; flex-wrap:wrap; gap:8px;">
+    <a class="btn btn-light" href="/backup/export/movimentos.csv">Movimentos CSV</a>
+    <a class="btn btn-light" href="/backup/export/jantares.csv">Jantares CSV</a>
+    <a class="btn btn-light" href="/backup/export/orcamento.csv">Orçamento CSV</a>
+    <a class="btn btn-light" href="/backup/export/patrocinadores.csv">Patrocinadores CSV</a>
+    <a class="btn btn-light" href="/backup/export/peditorios.csv">Peditórios CSV</a>
+    <a class="btn btn-light" href="/backup/export/casais.csv">Casais CSV</a>
   </div>
 </div>
-
-<div class="card" style="margin-bottom:12px;">
-  <h3>Formatos avançados</h3>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-    <a class="btn btn-primary" href="/backup/export.xlsx">Exportar Excel (com logo)</a>
-    <a class="btn" href="/backup/export/all-csv.zip">ZIP com CSVs + logo</a>
-  </div>
-</div>
-
 
 <div class="card">
-  <h3>Tabelas incluídas (JSON/SQL)</h3>
+  <h3 style="margin-top:0">Tabelas na base de dados</h3>
+
+  <% 
+    // mapeia nomes para CSVs rápidos (quando existirem rotas dedicadas)
+    const csvMap = {
+      movimentos: '/backup/export/movimentos.csv',
+      jantares: '/backup/export/jantares.csv',
+      orcamento_servicos: '/backup/export/orcamento.csv',
+      patrocinadores: '/backup/export/patrocinadores.csv',
+      peditorios: '/backup/export/peditorios.csv',
+      casais: '/backup/export/casais.csv',
+    };
+  %>
+
   <table class="table">
-    <thead><tr><th>Tabela</th><th>Registos</th></tr></thead>
+    <thead>
+      <tr>
+        <th style="width:220px">Tabela</th>
+        <th>Registos</th>
+        <th>DDL</th>
+        <th style="width:160px">Ação</th>
+      </tr>
+    </thead>
     <tbody>
-      <% tables.forEach(t => { %>
+      <% if (!tables || !tables.length) { %>
+        <tr><td colspan="4" class="muted">Sem tabelas encontradas.</td></tr>
+      <% } %>
+      <% (tables || []).forEach(t => { %>
         <tr>
           <td><code><%= t.name %></code></td>
-          <td><%= counts[t.name] %></td>
+          <td><%= (counts && typeof counts[t.name] !== 'undefined') ? counts[t.name] : '—' %></td>
+          <td>
+            <details>
+              <summary>Ver SQL</summary>
+              <pre style="white-space:pre-wrap; margin:6px 0;"><%= t.sql || '(sem DDL disponível)' %></pre>
+            </details>
+          </td>
+          <td>
+            <% if (csvMap[t.name]) { %>
+              <a class="btn btn-light" href="<%= csvMap[t.name] %>">Exportar CSV</a>
+            <% } else { %>
+              <span class="muted">Sem CSV direto</span>
+            <% } %>
+          </td>
         </tr>
       <% }) %>
     </tbody>
   </table>
 </div>
+
+<style>
+  /* pequeno ajuste para mobile */
+  @media (max-width: 640px) {
+    .actions-row .btn { flex: 1 1 auto; }
+    table.table code { word-break: break-all; }
+  }
+</style>
