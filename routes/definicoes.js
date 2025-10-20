@@ -6,43 +6,6 @@ import { requireAuth } from '../middleware/requireAuth.js';
 
 const router = Router();
 
-/* --------------------------------------------------
-   Helpers
----------------------------------------------------*/
-// Garante que existe a linha id=1 e as colunas do rodízio
-function ensureSettingsAndRodizio() {
-  const row = db.prepare(`SELECT 1 FROM settings WHERE id=1`).get();
-  if (!row) db.prepare(`INSERT INTO settings (id) VALUES (1)`).run();
-
-  const cols = db.prepare(`PRAGMA table_info('settings')`).all().map(c => c.name);
-  const add = (n, def) => { if (!cols.includes(n)) db.exec(`ALTER TABLE settings ADD COLUMN ${n} ${def}`); };
-
-  add('line1', 'TEXT');
-  add('line2', 'TEXT');
-  add('logo_path', 'TEXT');
-  add('primary_color', 'TEXT');
-  add('secondary_color', 'TEXT');
-  add('title', 'TEXT');
-  add('sub_title', 'TEXT');
-
-  // Rodízio
-  add('rodizio_bloco_cents', 'INTEGER NOT NULL DEFAULT 500000');   // 5.000 €
-  add('rodizio_inicio_casal_id', 'INTEGER');                        // casal a começar ciclo
-  add('rodizio_blocks_aplicados', 'INTEGER NOT NULL DEFAULT 0');    // nº blocos já aplicados
-}
-
-// parse "euros" vindo do input (suporta vírgula/ponto)
-function parseEurosToCents(v) {
-  const s = String(v ?? '').trim().replace(/\s+/g, '').replace(',', '.');
-  const n = Number(s);
-  return Number.isFinite(n) ? Math.round(n * 100) : 0;
-}
-
-ensureSettingsAndRodizio();
-
-/* --------------------------------------------------
-   Campos base que já tinhas
----------------------------------------------------*/
 const KEYS = [
   { key: 'line1', label:'Linha 1 (nome)', type:'text' },
   { key: 'line2', label:'Linha 2 (subtítulo)', type:'text' },
@@ -53,58 +16,57 @@ const KEYS = [
   { key: 'sub_title', label:'Sub-título', type:'text' },
 ];
 
-/* --------------------------------------------------
-   GET /definicoes
-   -> Envia também dados do rodízio para a mesma view
----------------------------------------------------*/
-router.get('/definicoes', requireAuth, (req, res) => {
-  ensureSettingsAndRodizio();
-
-  let settings = db.prepare('SELECT * FROM settings WHERE id=1').get();
-
-  // fallback para primeiras execuções
-  if (!settings.line1 && !settings.line2 && !settings.primary_color && !settings.secondary_color) {
+/* ===================== BOOT/MIGRAÇÃO ===================== */
+// linha fixa na settings
+function ensureSettingsRow() {
+  let row = db.prepare('SELECT * FROM settings WHERE id=1').get();
+  if (!row) {
     db.prepare(`
-      UPDATE settings SET
-        line1 = COALESCE(line1,'Comisão de Festas'),
-        line2 = COALESCE(line2,'em Honra de Nossa Senhora da Graça 2026 - Vila Caiz'),
-        primary_color = COALESCE(primary_color,'#1f6feb'),
-        secondary_color = COALESCE(secondary_color,'#b58900')
-      WHERE id=1
-    `).run();
-    settings = db.prepare('SELECT * FROM settings WHERE id=1').get();
+      INSERT INTO settings (id,line1,line2,primary_color,secondary_color)
+      VALUES (1,?,?,?,?)
+    `).run(
+      'Comisão de Festas',
+      'em Honra de Nossa Senhora da Graça 2026 - Vila Caiz',
+      '#1f6feb',
+      '#b58900'
+    );
+    row = db.prepare('SELECT * FROM settings WHERE id=1').get();
   }
+  return row;
+}
 
+// tabela para aplicações parciais do resto
+(function ensureRodizioTables(){
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS rodizio_aplicacoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dt TEXT NOT NULL DEFAULT (date('now')),
+        casal_id INTEGER NOT NULL REFERENCES casais(id) ON DELETE CASCADE,
+        valor_cents INTEGER NOT NULL CHECK (valor_cents >= 0)
+      );
+      CREATE INDEX IF NOT EXISTS idx_rodizio_aplicacoes_casal ON rodizio_aplicacoes(casal_id);
+    `);
+  } catch {}
+})();
+
+/* ===================== DEFINIÇÕES BASE ===================== */
+
+router.get('/definicoes', requireAuth, (req, res) => {
+  const row = ensureSettingsRow();
   const me = db.prepare('SELECT id,name,email,role FROM users WHERE id=?').get(req.session.user.id);
-  const casais = db.prepare(`SELECT id, nome FROM casais ORDER BY id`).all();
-
-  // Resumo do rodízio (para mostrar na página)
-  const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
-  const blocoCents = Number(settings.rodizio_bloco_cents ?? 500000);
-  const blocksAplicados = Number(settings.rodizio_blocks_aplicados ?? 0);
-  const blocosCompletos = blocoCents > 0 ? Math.floor(totalCasaCents / blocoCents) : 0;
-  const restoCents      = blocoCents > 0 ? (totalCasaCents - blocosCompletos * blocoCents) : totalCasaCents;
-  const novos           = Math.max(0, blocosCompletos - blocksAplicados);
-
   res.render('definicoes', {
     title:'Definições',
     user:req.session.user,
     KEYS,
-    map:settings,
+    map:row,
     me,
-    casais,                           // para o <select> do início
-    rodizioResumo: { totalCasaCents, blocoCents, blocosCompletos, restoCents, blocksAplicados, novos },
     msg:req.query.msg||null,
     err:req.query.err||null
   });
 });
 
-/* --------------------------------------------------
-   POST /definicoes  (campos base)
----------------------------------------------------*/
 router.post('/definicoes', requireAuth, (req, res) => {
-  ensureSettingsAndRodizio();
-
   const fields = KEYS.map(k => k.key);
   const setSql = fields.map(k => `${k}=?`).join(', ');
   const values = fields.map(k => (req.body[k] ?? null));
@@ -112,13 +74,9 @@ router.post('/definicoes', requireAuth, (req, res) => {
   res.redirect('/definicoes?msg=Definições+guardadas');
 });
 
-/* --------------------------------------------------
-   Perfil (sem alterações)
----------------------------------------------------*/
 router.post('/definicoes/perfil', requireAuth, (req, res) => {
   const { name, email, current_password, new_password, confirm_password } = req.body;
-  db.prepare('UPDATE users SET name=?, email=? WHERE id=?')
-    .run((name||'').trim(), (email||'').trim(), req.session.user.id);
+  db.prepare('UPDATE users SET name=?, email=? WHERE id=?').run((name||'').trim(), (email||'').trim(), req.session.user.id);
 
   if (new_password || confirm_password || current_password) {
     const me = db.prepare('SELECT password_hash FROM users WHERE id=?').get(req.session.user.id);
@@ -138,31 +96,71 @@ router.post('/definicoes/perfil', requireAuth, (req, res) => {
 
 /* ===================== RODÍZIO (Definições) ===================== */
 
-// Atalho opcional: envia para a mesma página focando a secção (#rodizio)
-router.get('/definicoes/rodizio', requireAuth, (_req, res) => {
-  res.redirect('/definicoes#rodizio');
+// helper simples de euros
+function euros(centsValue) {
+  return ((centsValue || 0) / 100).toFixed(2);
+}
+
+// GET /definicoes/rodizio
+router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
+  try {
+    const settings = ensureSettingsRow();
+
+    // dados auxiliares
+    const casais = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
+
+    const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
+    const blocoCents = Number(settings.rodizio_bloco_cents ?? 500000);
+    const blocksAplicados = Number(settings.rodizio_blocks_aplicados ?? 0);
+
+    const blocosCompletos = blocoCents > 0 ? Math.floor(totalCasaCents / blocoCents) : 0;
+    const restoTeorico    = blocoCents > 0 ? (totalCasaCents - blocosCompletos * blocoCents) : totalCasaCents;
+
+    // total já aplicado do resto (parcial)
+    const aplicadoRestoCents = db.prepare(`
+      SELECT IFNULL(SUM(valor_cents),0) AS s
+      FROM rodizio_aplicacoes
+    `).get().s;
+
+    const restoDisponivelCents = Math.max(0, (restoTeorico - aplicadoRestoCents));
+
+    // histórico das aplicações
+    const historico = db.prepare(`
+      SELECT a.id, a.dt, a.valor_cents, c.nome AS casal_nome
+      FROM rodizio_aplicacoes a
+      JOIN casais c ON c.id=a.casal_id
+      ORDER BY a.id DESC
+    `).all();
+
+    res.render('def_rodizio', {
+      title: 'Rodízio',
+      settings,
+      casais,
+      euros,
+      resumo: {
+        totalCasaCents,
+        blocoCents,
+        blocosCompletos,
+        blocksAplicados,
+        restoTeoricoCents: restoTeorico,
+        aplicadoRestoCents,
+        restoDisponivelCents
+      },
+      historico,
+      msg: req.query.msg || null,
+      err: req.query.err || null
+    });
+  } catch (e) { next(e); }
 });
 
-// Guardar configurações do rodízio
+// POST /definicoes/rodizio  (guardar tamanho de bloco e início do rodízio)
 router.post('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
-    ensureSettingsAndRodizio();
+    const blocoEuros = String(req.body.bloco ?? '').trim();
+    const blocoCents = Math.round(Number(blocoEuros.replace(',', '.')) * 100) || 0;
+    const inicioId   = req.body.inicio_casal_id ? Number(req.body.inicio_casal_id) : null;
 
-    // Aceita nomes novos e antigos dos campos
-    const blocoCents =
-      parseEurosToCents(req.body.rodizio_bloco_euros ?? req.body.bloco ?? 0);
-
-    const inicioIdRaw =
-      req.body.rodizio_inicio_casal_id ?? req.body.inicio_casal_id ?? '';
-
-    const inicioId = inicioIdRaw ? Number(inicioIdRaw) : null;
-
-    const aplicadosRaw =
-      req.body.rodizio_blocks_aplicados ?? req.body.blocks_aplicados ?? '';
-
-    const aplicados = aplicadosRaw === '' ? null : Math.max(0, parseInt(aplicadosRaw, 10));
-
-    // Garante a linha e atualiza
+    ensureSettingsRow();
     db.prepare(`
       UPDATE settings
          SET rodizio_bloco_cents = ?,
@@ -170,20 +168,39 @@ router.post('/definicoes/rodizio', requireAuth, (req, res, next) => {
        WHERE id=1
     `).run(blocoCents, inicioId);
 
-    if (aplicados !== null && Number.isFinite(aplicados)) {
-      db.prepare(`UPDATE settings SET rodizio_blocks_aplicados=? WHERE id=1`).run(aplicados);
-    }
-
-    res.redirect('/definicoes#rodizio');
+    res.redirect('/definicoes/rodizio?msg=Definições+de+rodízio+guardadas');
   } catch (e) { next(e); }
 });
 
-// Reset dos blocos aplicados
-router.post('/definicoes/rodizio/reset', requireAuth, (_req, res, next) => {
+// POST /definicoes/rodizio/aplicar  (aplicar parte do resto a um casal)
+router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
   try {
-    ensureSettingsAndRodizio();
-    db.prepare(`UPDATE settings SET rodizio_blocks_aplicados=0 WHERE id=1`).run();
-    res.redirect('/definicoes#rodizio');
+    const casal_id = Number(req.body.casal_id || 0) || null;
+    const valorTxt = String(req.body.valor || '').trim().replace(/\s/g,'').replace('.', '').replace(',', '.');
+    const valor_cents = Math.round((Number(valorTxt) || 0) * 100);
+
+    if (!casal_id) return res.redirect('/definicoes/rodizio?err=Escolhe+um+casal');
+    if (valor_cents <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
+
+    // recalcular resto disponível
+    const settings = ensureSettingsRow();
+    const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
+    const blocoCents = Number(settings.rodizio_bloco_cents ?? 500000);
+    const blocosCompletos = blocoCents > 0 ? Math.floor(totalCasaCents / blocoCents) : 0;
+    const restoTeorico = blocoCents > 0 ? (totalCasaCents - blocosCompletos * blocoCents) : totalCasaCents;
+    const aplicadoRestoCents = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
+    const restoDisponivelCents = Math.max(0, restoTeorico - aplicadoRestoCents);
+
+    if (valor_cents > restoDisponivelCents) {
+      return res.redirect('/definicoes/rodizio?err=Valor+excede+o+resto+disponível');
+    }
+
+    db.prepare(`
+      INSERT INTO rodizio_aplicacoes (casal_id, valor_cents)
+      VALUES (?, ?)
+    `).run(casal_id, valor_cents);
+
+    return res.redirect('/definicoes/rodizio?msg=Aplicação+registada');
   } catch (e) { next(e); }
 });
 
