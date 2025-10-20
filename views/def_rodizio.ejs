@@ -2,103 +2,112 @@
 <div class="toolbar">
   <h1>Rodízio</h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-    <a class="btn" href="/definicoes">← Voltar</a>
-  </div>
-</div>
-
-<div class="cards" style="margin-bottom:12px;">
-  <div class="card stat">
-    <div class="stat-label">Total “Em casa”</div>
-    <div class="stat-number">€ <%= euros(resumo.totalCasaCents) %></div>
-  </div>
-  <div class="card stat">
-    <div class="stat-label">Tamanho do bloco</div>
-    <div class="stat-number">€ <%= euros(resumo.blocoCents) %></div>
-  </div>
-  <div class="card stat">
-    <div class="stat-label">Blocos completos</div>
-    <div class="stat-number"><%= resumo.blocosCompletos %></div>
-  </div>
-  <div class="card stat">
-    <div class="stat-label">Resto teórico</div>
-    <div class="stat-number">€ <%= euros(resumo.restoTeoricoCents) %></div>
-  </div>
-  <div class="card stat">
-    <div class="stat-label">Resto já aplicado</div>
-    <div class="stat-number">€ <%= euros(resumo.aplicadoRestoCents) %></div>
-  </div>
-  <div class="card stat">
-    <div class="stat-label"><strong>Resto disponível</strong></div>
-    <div class="stat-number"><strong>€ <%= euros(resumo.restoDisponivelCents) %></strong></div>
+    <a class="btn btn-light" href="/definicoes">Voltar</a>
+    <a class="btn" href="/casais">Casais</a>
   </div>
 </div>
 
 <% if (err) { %>
-  <div class="alert"><%= err %></div>
+  <div class="alert alert-error"><%= err %></div>
 <% } %>
 <% if (msg) { %>
-  <div class="alert success"><%= msg %></div>
+  <div class="alert alert-success"><%= msg %></div>
 <% } %>
 
-<div class="card" style="margin-bottom:12px;">
-  <h3>Definições do rodízio</h3>
-  <form method="post" action="/definicoes/rodizio" class="form-grid">
-    <label>Bloco (€)
-      <input name="bloco" inputmode="decimal" value="<%= (resumo.blocoCents/100).toFixed(2) %>">
-    </label>
-    <label>Início (casal)
-      <select name="inicio_casal_id">
-        <option value="">(sem início fixo)</option>
-        <% casais.forEach(c => { %>
-          <option value="<%= c.id %>" <%= (String(c.id)===String((settings.rodizio_inicio_casal_id||''))) ? 'selected' : '' %>><%= c.nome %></option>
-        <% }) %>
-      </select>
-    </label>
-    <button class="btn">Guardar</button>
-  </form>
+<!-- Cartões de resumo -->
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Saldo movimentos</div>
+    <div class="stat-number">€ <%= euros(resumo.saldoMovimentosCents) %></div>
+    <div class="muted" style="font-size:12px">
+      = receitas − despesas + peditórios + patrocínios
+    </div>
+  </div>
+
+  <div class="card stat">
+    <div class="stat-label">Lucro projetado (jantares pendentes)</div>
+    <div class="stat-number">€ <%= euros(resumo.lucroProjetadoPendentesCents) %></div>
+  </div>
+
+  <div class="card stat">
+    <div class="stat-label">Saldo projetado</div>
+    <div class="stat-number">€ <%= euros(resumo.saldoProjetadoCents) %></div>
+  </div>
+
+  <div class="card stat">
+    <div class="stat-label">Total em casais</div>
+    <div class="stat-number">€ <%= euros(resumo.totalCasaCents) %></div>
+  </div>
+
+  <div class="card stat">
+    <div class="stat-label">Resto teórico</div>
+    <div class="stat-number">€ <%= euros(resumo.restoTeoricoCents) %></div>
+  </div>
+
+  <div class="card stat">
+    <div class="stat-label">Aplicado do resto</div>
+    <div class="stat-number">€ <%= euros(resumo.aplicadoRestoCents) %></div>
+  </div>
+
+  <div class="card stat" style="border:2px solid var(--primary);">
+    <div class="stat-label">Resto disponível</div>
+    <div class="stat-number">€ <%= euros(resumo.restoDisponivelCents) %></div>
+  </div>
 </div>
 
+<!-- Breakdown opcional -->
 <div class="card" style="margin-bottom:12px;">
-  <h3>Aplicar resto a um casal</h3>
+  <h3 style="margin-top:0">Detalhe do saldo de movimentos</h3>
+  <div class="grid" style="grid-template-columns: repeat(4, minmax(140px,1fr)); gap:8px;">
+    <div class="card stat"><div class="stat-label">Receitas</div><div class="stat-number">€ <%= euros(resumo.movReceitas||0) %></div></div>
+    <div class="card stat"><div class="stat-label">Despesas</div><div class="stat-number">€ <%= euros(resumo.movDespesas||0) %></div></div>
+    <div class="card stat"><div class="stat-label">Peditórios</div><div class="stat-number">€ <%= euros(resumo.pedSum||0) %></div></div>
+    <div class="card stat"><div class="stat-label">Patrocínios</div><div class="stat-number">€ <%= euros(resumo.patEntregue||0) %></div></div>
+  </div>
+</div>
+
+<!-- Aplicar parte do resto -->
+<div class="card" style="margin-bottom:12px;">
+  <h3 style="margin-top:0">Aplicar resto a um casal</h3>
   <form method="post" action="/definicoes/rodizio/aplicar" class="form-grid">
     <label>Casal
       <select name="casal_id" required>
-        <option value="">(escolher casal)</option>
-        <% casais.forEach(c => { %>
-          <option value="<%= c.id %>"><%= c.nome %></option>
+        <option value="">— escolher —</option>
+        <% (casais||[]).forEach(c => { %>
+          <option value="<%= c.id %>"><%= c.nome %> (tem € <%= euros(c.valor_casa_cents||0) %>)</option>
         <% }) %>
       </select>
     </label>
-    <label>Valor (€)
-      <!-- **IMPORTANTE**: usar placeholder em vez de value -->
-      <input name="valor" inputmode="decimal"
-             placeholder="<%= (resumo.restoDisponivelCents/100).toFixed(2) %>"
-             value="">
+    <label>Valor a aplicar (€)
+      <input type="number" name="valor" inputmode="decimal" step="0.01" min="0" placeholder="0,00" required />
+      <div class="muted" style="font-size:12px">Resto disponível: € <%= euros(resumo.restoDisponivelCents) %></div>
     </label>
-    <button class="btn btn-primary">Aplicar</button>
+    <div style="align-self:end">
+      <button class="btn btn-primary">Aplicar</button>
+    </div>
   </form>
-  <p class="muted" style="margin-top:8px">
-    Dica: podes aplicar <em>qualquer</em> parte do resto (ex.: 155,00 €). O restante fica disponível para futuras aplicações.
-  </p>
 </div>
 
+<!-- Histórico de aplicações -->
 <div class="card">
-  <h3>Histórico de aplicações do resto</h3>
+  <h3 style="margin-top:0">Histórico</h3>
   <table class="table">
     <thead>
-      <tr><th>Data</th><th>Casal</th><th>Valor</th></tr>
+      <tr><th>Data</th><th>Casal</th><th style="text-align:right">Valor</th></tr>
     </thead>
     <tbody>
-      <% if (!historico.length) { %>
-        <tr><td colspan="3" class="muted">Ainda sem aplicações.</td></tr>
+      <% if (!(historico||[]).length) { %>
+        <tr><td colspan="3" class="muted">Sem aplicações ainda.</td></tr>
+      <% } else { %>
+        <% historico.forEach(h => { %>
+          <tr>
+            <td><%= h.dt || '' %></td>
+            <td><%= h.casal_nome || '' %></td>
+            <td style="text-align:right">€ <%= euros(h.valor_cents||0) %></td>
+          </tr>
+        <% }) %>
       <% } %>
-      <% historico.forEach(r => { %>
-        <tr>
-          <td><%= r.dt %></td>
-          <td><%= r.casal_nome %></td>
-          <td>€ <%= euros(r.valor_cents) %></td>
-        </tr>
-      <% }) %>
     </tbody>
   </table>
 </div>
+
