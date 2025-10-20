@@ -2,62 +2,59 @@
 <div class="toolbar">
   <h1>Definições</h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-    <a class="btn btn-light" href="/dashboard">← Voltar</a>
-    <a class="btn" href="/definicoes/rodizio">Rodízio (casais)</a>
+    <a class="btn" href="/backup">Backup</a>
+    <a class="btn" href="/definicoes/rodizio">Rodízio</a>
   </div>
 </div>
 
 <% if (err) { %>
-  <div class="alert"><%= err %></div>
+  <div class="alert alert-error"><%= err %></div>
 <% } %>
 <% if (msg) { %>
-  <div class="alert success"><%= msg %></div>
+  <div class="alert alert-success"><%= msg %></div>
 <% } %>
 
-<!-- ================== Branding / UI ================== -->
-<section class="card">
-  <h3>Branding & UI</h3>
-  <form method="post" action="/definicoes" class="form-grid">
-    <% KEYS.forEach(k => { %>
-      <label><%= k.label %>
-        <input type="<%= k.type %>" name="<%= k.key %>" value="<%= map[k.key] || '' %>" />
+<div class="grid" style="grid-template-columns: minmax(260px,1fr) minmax(260px,1fr); gap:12px;">
+  <!-- Branding & UI -->
+  <div class="card">
+    <h3 style="margin-top:0">Branding & UI</h3>
+    <form method="post" action="/definicoes" class="form-grid">
+      <% (KEYS||[]).forEach(function(k){ %>
+        <label><%= k.label %>
+          <input type="<%= k.type %>" name="<%= k.key %>" value="<%= (map && map[k.key]) ? map[k.key] : '' %>" />
+        </label>
+      <% }) %>
+      <div style="grid-column:1/-1;">
+        <button class="btn btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Perfil -->
+  <div class="card">
+    <h3 style="margin-top:0">O meu perfil</h3>
+    <form method="post" action="/definicoes/perfil" class="form-grid">
+      <label>Nome
+        <input name="name" value="<%= (me && me.name) || '' %>" />
       </label>
-    <% }) %>
-    <button class="btn btn-primary">Guardar</button>
-  </form>
-</section>
+      <label>Email
+        <input name="email" type="email" value="<%= (me && me.email) || '' %>" />
+      </label>
 
-<!-- ================== O meu perfil ================== -->
-<section class="card" style="margin-top:12px">
-  <h3>O meu perfil</h3>
-  <form method="post" action="/definicoes/perfil" class="form-grid">
-    <label>Nome
-      <input name="name" value="<%= me.name %>" required>
-    </label>
-    <label>Email
-      <input type="email" name="email" value="<%= me.email %>" required>
-    </label>
+      <div style="grid-column:1/-1" class="muted">Alterar palavra-passe (opcional)</div>
+      <label>Password atual
+        <input type="password" name="current_password" />
+      </label>
+      <label>Password nova
+        <input type="password" name="new_password" />
+      </label>
+      <label>Confirmar password nova
+        <input type="password" name="confirm_password" />
+      </label>
 
-    <div style="grid-column:1/-1"><strong>Alterar password (opcional)</strong></div>
-    <label>Password atual
-      <input type="password" name="current_password">
-    </label>
-    <label>Nova password
-      <input type="password" name="new_password">
-    </label>
-    <label>Confirmar nova
-      <input type="password" name="confirm_password">
-    </label>
-
-    <button class="btn">Guardar perfil</button>
-  </form>
-</section>
-
-<!-- ================== Rodízio (atalho) ================== -->
-<section class="card" style="margin-top:12px">
-  <h3>Rodízio (casais)</h3>
-  <p class="muted" style="margin:6px 0 12px">
-    Define o tamanho do bloco, vê o resto disponível e aplica valores a casais.
-  </p>
-  <a class="btn btn-primary" href="/definicoes/rodizio">Abrir rodízio</a>
-</section>
+      <div style="grid-column:1/-1;">
+        <button class="btn btn-primary">Atualizar</button>
+      </div>
+    </form>
+  </div>
+</div>
