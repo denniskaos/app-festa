@@ -1,58 +1,104 @@
-<!doctype html>
-<html lang="pt">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rodízio · Definições</title>
-  <link rel="stylesheet" href="/public/css/style.css" />
-  <link rel="stylesheet" href="/public/app.css" />
-</head>
-<body>
-
+<!-- views/def_rodizio.ejs -->
 <div class="toolbar">
   <h1>Rodízio</h1>
-  <a class="btn btn-light" href="/definicoes" style="margin-left:auto">Voltar</a>
+  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="/definicoes">← Voltar</a>
+  </div>
 </div>
 
-<section class="card" style="padding:16px">
-  <form method="post" action="/definicoes/rodizio" class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-    <label>Bloco por ciclo (€)
-      <input type="number" step="0.01" min="0" name="bloco"
-             value="<%= ((settings.rodizio_bloco_cents ?? 500000)/100).toFixed(2) %>" required>
-    </label>
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Total “Em casa”</div>
+    <div class="stat-number">€ <%= euros(resumo.totalCasaCents) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Tamanho do bloco</div>
+    <div class="stat-number">€ <%= euros(resumo.blocoCents) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Blocos completos</div>
+    <div class="stat-number"><%= resumo.blocosCompletos %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Resto teórico</div>
+    <div class="stat-number">€ <%= euros(resumo.restoTeoricoCents) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Resto já aplicado</div>
+    <div class="stat-number">€ <%= euros(resumo.aplicadoRestoCents) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label"><strong>Resto disponível</strong></div>
+    <div class="stat-number"><strong>€ <%= euros(resumo.restoDisponivelCents) %></strong></div>
+  </div>
+</div>
 
-    <label>Casal onde começa a sequência
-      <select name="inicio_casal_id" required>
-        <option value="">— escolher —</option>
+<% if (err) { %>
+  <div class="alert"><%= err %></div>
+<% } %>
+<% if (msg) { %>
+  <div class="alert success"><%= msg %></div>
+<% } %>
+
+<div class="card" style="margin-bottom:12px;">
+  <h3>Definições do rodízio</h3>
+  <form method="post" action="/definicoes/rodizio" class="form-grid">
+    <label>Bloco (€)
+      <input name="bloco" inputmode="decimal" value="<%= (resumo.blocoCents/100).toFixed(2) %>">
+    </label>
+    <label>Início (casal)
+      <select name="inicio_casal_id">
+        <option value="">(sem início fixo)</option>
         <% casais.forEach(c => { %>
-          <option value="<%= c.id %>" <%= (settings.rodizio_inicio_casal_id === c.id ? 'selected' : '') %>>
-            <%= c.nome %>
-          </option>
+          <option value="<%= c.id %>" <%= (String(c.id)===String((settings.rodizio_inicio_casal_id||''))) ? 'selected' : '' %>><%= c.nome %></option>
         <% }) %>
       </select>
     </label>
-
-    <div style="align-self:end">
-      <button class="btn">Guardar</button>
-    </div>
+    <button class="btn">Guardar</button>
   </form>
-</section>
+</div>
 
-<section class="card" style="padding:16px; margin-top:12px">
-  <h3 style="margin:0 0 10px">Resumo</h3>
-  <div class="cards" style="margin-top:6px">
-    <div class="card stat"><div class="stat-label">Total “em casa”</div><div class="stat-number">€ <%= (resumo.totalCasaCents/100).toFixed(2) %></div></div>
-    <div class="card stat"><div class="stat-label">Tamanho do bloco</div><div class="stat-number">€ <%= (resumo.blocoCents/100).toFixed(2) %></div></div>
-    <div class="card stat"><div class="stat-label">Blocos completos</div><div class="stat-number"><%= resumo.blocosCompletos %></div></div>
-    <div class="card stat"><div class="stat-label">Blocos já aplicados</div><div class="stat-number"><%= resumo.blocksAplicados %></div></div>
-    <div class="card stat"><div class="stat-label">Novos blocos por aplicar</div><div class="stat-number"><%= resumo.novos %></div></div>
-    <div class="card stat"><div class="stat-label">Resto (não completo)</div><div class="stat-number">€ <%= (resumo.restoCents/100).toFixed(2) %></div></div>
-  </div>
+<div class="card" style="margin-bottom:12px;">
+  <h3>Aplicar resto a um casal</h3>
+  <form method="post" action="/definicoes/rodizio/aplicar" class="form-grid">
+    <label>Casal
+      <select name="casal_id" required>
+        <option value="">(escolher casal)</option>
+        <% casais.forEach(c => { %>
+          <option value="<%= c.id %>"><%= c.nome %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>Valor (€)
+      <!-- **IMPORTANTE**: usar placeholder em vez de value -->
+      <input name="valor" inputmode="decimal"
+             placeholder="<%= (resumo.restoDisponivelCents/100).toFixed(2) %>"
+             value="">
+    </label>
+    <button class="btn btn-primary">Aplicar</button>
+  </form>
+  <p class="muted" style="margin-top:8px">
+    Dica: podes aplicar <em>qualquer</em> parte do resto (ex.: 155,00 €). O restante fica disponível para futuras aplicações.
+  </p>
+</div>
 
-  <div style="margin-top:12px">
-    <a class="btn btn-primary" href="/casais/rodizio">Ir para a distribuição</a>
-  </div>
-</section>
-
-</body>
-</html>
+<div class="card">
+  <h3>Histórico de aplicações do resto</h3>
+  <table class="table">
+    <thead>
+      <tr><th>Data</th><th>Casal</th><th>Valor</th></tr>
+    </thead>
+    <tbody>
+      <% if (!historico.length) { %>
+        <tr><td colspan="3" class="muted">Ainda sem aplicações.</td></tr>
+      <% } %>
+      <% historico.forEach(r => { %>
+        <tr>
+          <td><%= r.dt %></td>
+          <td><%= r.casal_nome %></td>
+          <td>€ <%= euros(r.valor_cents) %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
