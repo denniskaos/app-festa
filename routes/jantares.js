@@ -7,10 +7,10 @@ console.log('[routes] jantares (CRUD) carregado');
 
 const router = Router();
 
-<<<<<<< HEAD
+ HEAD
 /* -------- helpers -------- */
 // Descobre uma vez se a coluna preco_cents existe (compatibilidade com DB antigas)
-=======
+
 /* -------------------------------------------------------
    Migrações defensivas (em runtime)
 ------------------------------------------------------- */
@@ -25,18 +25,18 @@ const router = Router();
 })();
 
 // Detecta se existe a coluna "preco_cents" em jantares_convidados
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
 const HAS_PRECO_COL = (() => {
   try {
     const cols = db.prepare(`PRAGMA table_info('jantares_convidados')`).all().map(c => c.name);
     return cols.includes('preco_cents');
-<<<<<<< HEAD
+ HEAD
   } catch {
     return false;
   }
 })();
 
-=======
+
   } catch { return false; }
 })();
 
@@ -47,42 +47,41 @@ const HAS_PRECO_COL = (() => {
 // - Se existir "preco_cents" nos convidados: soma override ou preço base quando nulo.
 // - Se não existir a coluna: usa contagem de convidados × preço base;
 //   se ainda não houver convidados, usa pessoas × preço base.
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
 function receitaPorJantarCents(j) {
   const base = j.valor_pessoa_cents || 0;
 
   if (HAS_PRECO_COL) {
-<<<<<<< HEAD
+ HEAD
     // Soma por convidado usando override (preco_cents) ou o preço base do jantar
     const agg = db.prepare(`
       SELECT 
         COUNT(*) AS n,
         COALESCE(SUM(COALESCE(preco_cents, ?)), 0) AS s
-=======
+
     const agg = db.prepare(`
       SELECT COUNT(*) AS n,
              COALESCE(SUM(COALESCE(preco_cents, ?)), 0) AS s
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
       FROM jantares_convidados
       WHERE jantar_id=?
     `).get(base, j.id);
 
-<<<<<<< HEAD
+ HEAD
     // Se não houver convidados, usa o cálculo antigo (pessoas × preço base)
-=======
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+    
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
     if (!agg || !agg.n) return (j.pessoas || 0) * base;
     return agg.s || 0;
   }
-
-<<<<<<< HEAD
+HEAD
   // Compat: sem coluna preco_cents → tenta contar convidados; senão, usa pessoas
   const n = db.prepare(`SELECT COUNT(*) AS n FROM jantares_convidados WHERE jantar_id=?`).get(j.id)?.n || 0;
   return (n > 0 ? n : (j.pessoas || 0)) * base;
 }
 
 /* LISTAR */
-=======
+
   const n = db.prepare(`SELECT COUNT(*) AS n FROM jantares_convidados WHERE jantar_id=?`).get(j.id)?.n || 0;
   const count = n > 0 ? n : (j.pessoas || 0);
   return count * base;
@@ -91,39 +90,39 @@ function receitaPorJantarCents(j) {
 /* -------------------------------------------------------
    LISTAR
 ------------------------------------------------------- */
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
 router.get('/jantares', requireAuth, (req, res, next) => {
   try {
     const jantaresRaw = db.prepare(`
       SELECT
         id,
-<<<<<<< HEAD
+ HEAD
         COALESCE(dt, '')                 AS dt,
         COALESCE(pessoas, 0)             AS pessoas,
         COALESCE(valor_pessoa_cents, 0)  AS valor_pessoa_cents,
         COALESCE(despesas_cents, 0)      AS despesas_cents
-=======
+
         COALESCE(dt,'')                AS dt,
         COALESCE(title,'')             AS title,
         COALESCE(pessoas,0)            AS pessoas,
         COALESCE(valor_pessoa_cents,0) AS valor_pessoa_cents,
         COALESCE(despesas_cents,0)     AS despesas_cents
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
       FROM jantares
       ORDER BY COALESCE(dt,'9999-99-99') DESC, id DESC
     `).all();
 
-<<<<<<< HEAD
+ HEAD
     const jantares = jantaresRaw.map(j => {
       const receita_cents = receitaPorJantarCents(j);
       const lucro_cents   = receita_cents - (j.despesas_cents || 0);
       return { ...j, receita_cents, lucro_cents };
-=======
+
     const jantares = rows.map(r => {
       const receita_cents = receitaPorJantarCents(r);
       const lucro_cents   = receita_cents - (r.despesas_cents || 0);
       return { ...r, receita_cents, lucro_cents };
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
     });
 
     const totalReceita  = jantares.reduce((a, r) => a + r.receita_cents, 0);
@@ -131,10 +130,10 @@ router.get('/jantares', requireAuth, (req, res, next) => {
     const totalLucro    = totalReceita - totalDespesas;
 
     res.render('jantares', {
-<<<<<<< HEAD
+ HEAD
       title: 'Jantares',
-=======
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
       jantares,
       totalReceita,
       totalDespesas,
@@ -145,13 +144,13 @@ router.get('/jantares', requireAuth, (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-<<<<<<< HEAD
+ HEAD
 /* FORM NOVO (usa views/jantares_form.ejs) */
-=======
+
 /* -------------------------------------------------------
    NOVO
 ------------------------------------------------------- */
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
 router.get('/jantares/new', requireAuth, (_req, res) => {
   res.render('jantares_form', { title: 'Novo jantar', j: null, euros, user: _req.session.user });
 });
@@ -167,12 +166,11 @@ router.post('/jantares', requireAuth, (req, res, next) => {
       INSERT INTO jantares (dt, title, pessoas, valor_pessoa_cents, despesas_cents)
       VALUES (?,?,?,?,?)
     `).run(
-<<<<<<< HEAD
+ HEAD
       (dt || '').trim() || null,
-=======
       (String(dt || '').trim() || null),
       (String(title || '').trim() || null),
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
       Number(pessoas || 0),
       cents(valor_pessoa),
       cents(despesas)
@@ -182,7 +180,7 @@ router.post('/jantares', requireAuth, (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-<<<<<<< HEAD
+HEAD
 /* EDITAR (usa o mesmo form) */
 router.get('/jantares/:id/edit', requireAuth, (req, res, next) => {
   try {
@@ -192,7 +190,7 @@ router.get('/jantares/:id/edit', requireAuth, (req, res, next) => {
              COALESCE(pessoas,0)                AS pessoas,
              COALESCE(valor_pessoa_cents,0)     AS valor_pessoa_cents,
              COALESCE(despesas_cents,0)         AS despesas_cents
-=======
+
 /* -------------------------------------------------------
    EDITAR
 ------------------------------------------------------- */
@@ -206,20 +204,20 @@ router.get('/jantares/:id/edit', requireAuth, (req, res, next) => {
         COALESCE(pessoas,0)            AS pessoas,
         COALESCE(valor_pessoa_cents,0) AS valor_pessoa_cents,
         COALESCE(despesas_cents,0)     AS despesas_cents
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
       FROM jantares
       WHERE id=?
     `).get(req.params.id);
 
-<<<<<<< HEAD
+ HEAD
     if (!j) return res.status(404).type('text').send('Jantar não encontrado');
 
     res.render('jantares_form', { title: `Editar jantar #${j.id}`, j, euros, user: req.session.user });
-=======
+
     if (!j) return res.status(404).send('Jantar não encontrado');
 
     res.render('jantares_edit', { j, euros, user: req.session.user });
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
   } catch (e) { next(e); }
 });
 
@@ -239,12 +237,12 @@ router.post('/jantares/:id', requireAuth, (req, res, next) => {
              despesas_cents=?
        WHERE id=?
     `).run(
-<<<<<<< HEAD
+ HEAD
       (dt || '').trim() || null,
-=======
+
       (String(dt || '').trim() || null),
       (String(title || '').trim() || null),
->>>>>>> 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
+ 8e055a6 (feat(jantares): prefixo 'Jantar — …' nos movimentos + redirecionamento 303 + cabeçalhos consistentes)
       Number(pessoas || 0),
       cents(valor_pessoa),
       cents(despesas),
