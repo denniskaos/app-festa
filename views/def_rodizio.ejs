@@ -1,113 +1,97 @@
 <!-- views/def_rodizio.ejs -->
 <div class="toolbar">
   <h1>Rodízio</h1>
-  <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-    <a class="btn btn-light" href="/definicoes">Voltar</a>
-    <a class="btn" href="/casais">Casais</a>
-  </div>
+  <a class="btn btn-light" style="margin-left:auto" href="/casais">Voltar</a>
 </div>
 
-<% if (err) { %>
-  <div class="alert alert-error"><%= err %></div>
-<% } %>
-<% if (msg) { %>
-  <div class="alert alert-success"><%= msg %></div>
-<% } %>
+<% if (err) { %><div class="alert"><%= err %></div><% } %>
+<% if (msg) { %><div class="notice"><%= msg %></div><% } %>
 
-<!-- Cartões de resumo -->
-<div class="cards" style="margin-bottom:12px;">
-  <div class="card stat">
-    <div class="stat-label">Saldo movimentos</div>
-    <div class="stat-number">€ <%= euros(resumo.saldoMovimentosCents) %></div>
-    <div class="muted" style="font-size:12px">
-      = receitas − despesas + peditórios + patrocínios
-    </div>
-  </div>
-
-  <div class="card stat">
-    <div class="stat-label">Lucro projetado (jantares pendentes)</div>
-    <div class="stat-number">€ <%= euros(resumo.lucroProjetadoPendentesCents) %></div>
-  </div>
-
-  <div class="card stat">
-    <div class="stat-label">Saldo projetado</div>
-    <div class="stat-number">€ <%= euros(resumo.saldoProjetadoCents) %></div>
-  </div>
-
-  <div class="card stat">
-    <div class="stat-label">Total em casais</div>
-    <div class="stat-number">€ <%= euros(resumo.totalCasaCents) %></div>
-  </div>
-
-  <div class="card stat">
-    <div class="stat-label">Resto teórico</div>
-    <div class="stat-number">€ <%= euros(resumo.restoTeoricoCents) %></div>
-  </div>
-
-  <div class="card stat">
-    <div class="stat-label">Aplicado do resto</div>
-    <div class="stat-number">€ <%= euros(resumo.aplicadoRestoCents) %></div>
-  </div>
-
-  <div class="card stat" style="border:2px solid var(--primary);">
-    <div class="stat-label">Resto disponível</div>
-    <div class="stat-number">€ <%= euros(resumo.restoDisponivelCents) %></div>
-  </div>
+<div class="cards" style="margin-bottom:12px">
+  <div class="card stat"><div class="stat-label">Saldo movimentos</div><div class="stat-number">€ <%= euros(cards.saldoMovimentos) %></div><div class="muted">receitas − despesas + peditórios + patrocínios</div></div>
+  <div class="card stat"><div class="stat-label">Lucro projetado (jantares pendentes)</div><div class="stat-number">€ <%= euros(cards.lucroProjetado) %></div></div>
+  <div class="card stat"><div class="stat-label">Saldo projetado</div><div class="stat-number">€ <%= euros(cards.saldoProjetado) %></div></div>
+  <div class="card stat"><div class="stat-label">Total em casais</div><div class="stat-number">€ <%= euros(cards.totalCasa) %></div></div>
 </div>
 
-<!-- Breakdown opcional -->
-<div class="card" style="margin-bottom:12px;">
-  <h3 style="margin-top:0">Detalhe do saldo de movimentos</h3>
-  <div class="grid" style="grid-template-columns: repeat(4, minmax(140px,1fr)); gap:8px;">
-    <div class="card stat"><div class="stat-label">Receitas</div><div class="stat-number">€ <%= euros(resumo.movReceitas||0) %></div></div>
-    <div class="card stat"><div class="stat-label">Despesas</div><div class="stat-number">€ <%= euros(resumo.movDespesas||0) %></div></div>
-    <div class="card stat"><div class="stat-label">Peditórios</div><div class="stat-number">€ <%= euros(resumo.pedSum||0) %></div></div>
-    <div class="card stat"><div class="stat-label">Patrocínios</div><div class="stat-number">€ <%= euros(resumo.patEntregue||0) %></div></div>
-  </div>
+<div class="cards" style="margin-bottom:12px">
+  <div class="card stat"><div class="stat-label">Resto teórico</div><div class="stat-number">€ <%= euros(cards.restoTeorico) %></div></div>
+  <div class="card stat"><div class="stat-label">Aplicado do resto</div><div class="stat-number">€ <%= euros(cards.aplicadoResto) %></div></div>
+  <div class="card stat"><div class="stat-label">Resto disponível</div><div class="stat-number">€ <%= euros(cards.restoDisponivel) %></div></div>
 </div>
 
-<!-- Aplicar parte do resto -->
-<div class="card" style="margin-bottom:12px;">
-  <h3 style="margin-top:0">Aplicar resto a um casal</h3>
-  <form method="post" action="/definicoes/rodizio/aplicar" class="form-grid">
-    <label>Casal
-      <select name="casal_id" required>
-        <option value="">— escolher —</option>
-        <% (casais||[]).forEach(c => { %>
-          <option value="<%= c.id %>"><%= c.nome %> (tem € <%= euros(c.valor_casa_cents||0) %>)</option>
-        <% }) %>
-      </select>
-    </label>
-    <label>Valor a aplicar (€)
-      <input type="number" name="valor" inputmode="decimal" step="0.01" min="0" placeholder="0,00" required />
-      <div class="muted" style="font-size:12px">Resto disponível: € <%= euros(resumo.restoDisponivelCents) %></div>
-    </label>
-    <div style="align-self:end">
-      <button class="btn btn-primary">Aplicar</button>
-    </div>
-  </form>
-</div>
-
-<!-- Histórico de aplicações -->
-<div class="card">
-  <h3 style="margin-top:0">Histórico</h3>
+<div class="card" style="margin-bottom:16px">
+  <h3>Detalhe do saldo de movimentos</h3>
   <table class="table">
-    <thead>
-      <tr><th>Data</th><th>Casal</th><th style="text-align:right">Valor</th></tr>
-    </thead>
     <tbody>
-      <% if (!(historico||[]).length) { %>
-        <tr><td colspan="3" class="muted">Sem aplicações ainda.</td></tr>
-      <% } else { %>
-        <% historico.forEach(h => { %>
-          <tr>
-            <td><%= h.dt || '' %></td>
-            <td><%= h.casal_nome || '' %></td>
-            <td style="text-align:right">€ <%= euros(h.valor_cents||0) %></td>
-          </tr>
-        <% }) %>
-      <% } %>
+      <tr><th>Receitas</th><td>€ <%= euros(detalhe.receitas) %></td></tr>
+      <tr><th>Despesas</th><td>€ <%= euros(detalhe.despesas) %></td></tr>
+      <tr><th>Peditórios</th><td>€ <%= euros(detalhe.peditorios) %></td></tr>
+      <tr><th>Patrocínios</th><td>€ <%= euros(detalhe.patrocinios) %></td></tr>
     </tbody>
   </table>
 </div>
 
+<div class="card" style="margin-bottom:16px">
+  <h3>Definições do rodízio</h3>
+  <form method="post" action="/definicoes/rodizio" class="form-grid">
+    <label>Bloco (€)
+      <input name="bloco" type="text" inputmode="decimal"
+             value="<%= euros(blocoCents) %>">
+    </label>
+
+    <label>Início (casal)
+      <select name="inicio_casal_id">
+        <option value="">(primeiro da lista)</option>
+        <% (casais||[]).forEach(c => { %>
+          <option value="<%= c.id %>" <%= (inicioId && inicioId===c.id) ? 'selected' : '' %>><%= c.nome %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <div style="grid-column:1/-1">
+      <button class="btn btn-primary">Guardar</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h3>Aplicar resto a um casal</h3>
+  <form method="post" action="/definicoes/rodizio/aplicar" class="form-grid">
+    <label>Casal
+      <select name="casal_id" required>
+        <option value="">(escolher casal)</option>
+        <% (casais||[]).forEach(c => { %>
+          <option value="<%= c.id %>"><%= c.nome %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>Valor (€)
+      <input type="text" name="valor" inputmode="decimal" value="0,00" required>
+    </label>
+
+    <div style="grid-column:1/-1">
+      <button class="btn btn-success">Aplicar</button>
+      <div class="muted">Dica: podes aplicar <i>qualquer</i> parte do resto. O restante fica disponível para futuras aplicações.</div>
+    </div>
+  </form>
+</div>
+
+<% if (historico && historico.length) { %>
+  <div class="card">
+    <h3>Histórico de aplicações do resto</h3>
+    <table class="table">
+      <thead><tr><th>Data</th><th>Casal</th><th>Valor</th></tr></thead>
+      <tbody>
+        <% historico.forEach(h => { %>
+          <tr>
+            <td><%= h.dt %></td>
+            <td><%= h.casal_nome %></td>
+            <td>€ <%= euros(h.valor_cents) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
