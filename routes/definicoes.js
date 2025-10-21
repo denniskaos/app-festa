@@ -50,8 +50,7 @@ function ensureSettingsRow() {
   } catch {}
 })();
 
-/* ===================== helpers financeiros ===================== */
-
+/* ===================== helpers ===================== */
 function euros(centsValue) {
   return ((centsValue || 0) / 100).toFixed(2);
 }
@@ -106,14 +105,13 @@ function calcularLucroProjPendentes() {
   `).all();
   for (const j of jantares) {
     if (isJantarLancado(j)) continue;
-    const pago = sumPagoPorJantar(j.id);              // <— usa o que foi PAGO, não 18,50 × pessoas
+    const pago = sumPagoPorJantar(j.id);              // receita = total pago
     total += (pago - (j.despesas_cents || 0));
   }
   return total;
 }
 
 /* ===================== DEFINIÇÕES BASE ===================== */
-
 router.get('/definicoes', requireAuth, (req, res) => {
   const row = ensureSettingsRow();
   const me = db.prepare('SELECT id,name,email,role FROM users WHERE id=?').get(req.session.user.id);
@@ -197,14 +195,27 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
       ORDER BY a.id DESC
     `).all();
 
-    // blocos completos (apenas para exibição de referência)
+    // blocos completos (só referência visual)
     const blocosCompletos = blocoCents > 0 ? Math.floor(saldoProjCents / blocoCents) : 0;
+
+    // --- ALIAS compat com views antigas: `cards.*` ---
+    const cards = {
+      saldoMovimentos:   saldoMovCents,
+      lucroProjetado:    lucroProjCents,
+      saldoProjetado:    saldoProjCents,
+      totalCasa:         totalEmCasais,
+      restoTeorico:      restoTeoricoCents,
+      restoDisponivel:   restoDisponivelCents,
+      blocosCompletos,   // por conveniência
+      bloco:             blocoCents
+    };
 
     res.render('def_rodizio', {
       title: 'Rodízio',
       settings,
       casais,
       euros,
+      // novo objeto consolidado
       resumo: {
         blocoCents,
         blocksAplicados,
@@ -217,6 +228,8 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
         aplicadoRestoCents,
         restoDisponivelCents
       },
+      // alias p/ view que usa `cards.*`
+      cards,
       historico,
       msg: req.query.msg || null,
       err: req.query.err || null
@@ -254,9 +267,7 @@ router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
     if (valor_cents <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
 
     // recalcular o resto disponível com a fórmula correta
-    const settings = ensureSettingsRow();
-    const blocoCents = Number(settings.rodizio_bloco_cents ?? 500000);
-
+    ensureSettingsRow();
     const totalEmCasais = sumOr0(`SELECT COALESCE(SUM(valor_casa_cents),0) AS s FROM casais`);
     const saldoMovCents = calcularSaldoMovimentos();
     const lucroProjCents = calcularLucroProjPendentes();
