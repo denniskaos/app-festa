@@ -16,32 +16,41 @@ const router = Router();
   } catch (e) { /* ignore */ }
 })();
 
-// saber se a coluna preco_cents existe em jantares_convidados (para o cálculo de receita)
+/* -------------------- helpers -------------------- */
+/** Receita esperada (base × pessoas, com overrides por convidado se existirem).
+ *  Mantemos para outras páginas se precisares, mas na listagem usamos o total pago. */
 const HAS_PRECO_COL = (() => {
   try {
     const cols = db.prepare(`PRAGMA table_info('jantares_convidados')`).all().map(c => c.name);
     return cols.includes('preco_cents');
-  } catch (e) { return false; }
+  } catch { return false; }
 })();
 
-/* -------------------- helpers -------------------- */
-function receitaPorJantarCents(j) {
+function receitaEsperadaPorJantarCents(j) {
   const base = j.valor_pessoa_cents || 0;
 
   if (HAS_PRECO_COL) {
-    // soma por convidado: usa override (preco_cents) quando existir; senão usa o preço base do jantar
     const agg = db.prepare(`
       SELECT COUNT(*) AS n, COALESCE(SUM(COALESCE(preco_cents, ?)), 0) AS s
       FROM jantares_convidados
       WHERE jantar_id=?
     `).get(base, j.id);
-    if (!agg || !agg.n) return (j.pessoas || 0) * base; // fallback se ainda não há convidados
+    if (!agg || !agg.n) return (j.pessoas || 0) * base;
     return agg.s || 0;
   }
 
-  // sem coluna preco_cents: fallback
-  const n = db.prepare(`SELECT COUNT(*) AS n FROM jantares_convidados WHERE jantar_id=?`).get(j.id)?.n || 0;
+  const n = db.prepare(`SELECT COUNT(*) AS n FROM jantares_convidados WHERE jantar_id=?`)
+               .get(j.id)?.n || 0;
   return (n ? n : (j.pessoas || 0)) * base;
+}
+
+/** Total pago (registado) por jantar – é isto que queremos mostrar como “Receita” na lista. */
+function totalPagoPorJantarCents(j) {
+  return db.prepare(`
+    SELECT IFNULL(SUM(pago_cents),0) AS s
+    FROM jantares_convidados
+    WHERE jantar_id=?
+  `).get(j.id).s;
 }
 
 /* -------------------- LISTAR -------------------- */
@@ -59,8 +68,9 @@ router.get('/jantares', requireAuth, (req, res, next) => {
       ORDER BY COALESCE(dt,'9999-99-99') DESC, id DESC
     `).all();
 
+    // <<< Receita = TOTAL PAGO (registado) >>>
     const jantares = rows.map(r => {
-      const receita_cents = receitaPorJantarCents(r);
+      const receita_cents = totalPagoPorJantarCents(r);
       const lucro_cents   = receita_cents - (r.despesas_cents || 0);
       return { ...r, receita_cents, lucro_cents };
     });
@@ -69,7 +79,14 @@ router.get('/jantares', requireAuth, (req, res, next) => {
     const totalDespesas = jantares.reduce((a, r) => a + r.despesas_cents, 0);
     const totalLucro    = totalReceita - totalDespesas;
 
-    res.render('jantares', { jantares, totalReceita, totalDespesas, totalLucro, euros, user: req.session.user });
+    res.render('jantares', {
+      jantares,
+      totalReceita,
+      totalDespesas,
+      totalLucro,
+      euros,
+      user: req.session.user
+    });
   } catch (e) { next(e); }
 });
 
