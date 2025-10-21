@@ -14,9 +14,12 @@ const KEYS = [
   { key: 'secondary_color', label:'Cor secundária', type:'color' },
   { key: 'title', label:'Título da página', type:'text' },
   { key: 'sub_title', label:'Sub-título', type:'text' },
+  // rodízio (guardamos aqui o tamanho do bloco e o casal de início)
+  { key: 'rodizio_bloco_cents', label:'(interno) bloco cents', type:'text' },
+  { key: 'rodizio_inicio_casal_id', label:'(interno) início casal id', type:'text' },
 ];
 
-/* ===================== BOOT/MIGRAÇÃO ===================== */
+// ---- helpers
 function ensureSettingsRow() {
   let row = db.prepare('SELECT * FROM settings WHERE id=1').get();
   if (!row) {
@@ -34,7 +37,7 @@ function ensureSettingsRow() {
   return row;
 }
 
-// tabela para aplicações parciais do resto
+// tabela para registar aplicações parciais do “resto”
 (function ensureRodizioTables(){
   try {
     db.exec(`
@@ -49,7 +52,10 @@ function ensureSettingsRow() {
   } catch {}
 })();
 
-/* ===================== DEFINIÇÕES BASE ===================== */
+// euros helper (mostramos valores em euros a partir de cents)
+function euros(centsValue) { return ((centsValue || 0) / 100).toFixed(2); }
+
+// ===================== DEFINIÇÕES BASE =====================
 router.get('/definicoes', requireAuth, (req, res) => {
   const row = ensureSettingsRow();
   const me = db.prepare('SELECT id,name,email,role FROM users WHERE id=?').get(req.session.user.id);
@@ -74,7 +80,8 @@ router.post('/definicoes', requireAuth, (req, res) => {
 
 router.post('/definicoes/perfil', requireAuth, (req, res) => {
   const { name, email, current_password, new_password, confirm_password } = req.body;
-  db.prepare('UPDATE users SET name=?, email=? WHERE id=?').run((name||'').trim(), (email||'').trim(), req.session.user.id);
+  db.prepare('UPDATE users SET name=?, email=? WHERE id=?')
+    .run((name||'').trim(), (email||'').trim(), req.session.user.id);
 
   if (new_password || confirm_password || current_password) {
     const me = db.prepare('SELECT password_hash FROM users WHERE id=?').get(req.session.user.id);
@@ -92,129 +99,132 @@ router.post('/definicoes/perfil', requireAuth, (req, res) => {
   res.redirect('/definicoes?msg=Perfil+atualizado');
 });
 
-/* ===================== RODÍZIO ===================== */
-const euros = (c) => ((c || 0) / 100).toFixed(2);
+// ===================== RODÍZIO =====================
+// — Fórmulas pedidas —
+// Saldo movimentos = receitas(mov) − despesas(mov) + peditórios + patrocínios
+// Lucro projetado (jantares pendentes) = Σ (receita calculada − despesas do jantar) dos NÃO lançados
+// Saldo projetado = saldo movimentos + lucro projetado
+// Resto teórico = max(0, saldo projetado − total “em casais”)
+// Resto disponível = max(0, resto teórico − total já aplicado do resto)
 
-// etiqueta para procurar movimentos do jantar
+function receitaCalculadaDoJantar(j) {
+  // com overrides por convidado (preco_cents) ou preço base
+  const base = j.valor_pessoa_cents || 0;
+  const agg = db.prepare(`
+    SELECT COUNT(*) AS n, COALESCE(SUM(COALESCE(preco_cents, ?)), 0) AS s
+    FROM jantares_convidados
+    WHERE jantar_id=?
+  `).get(base, j.id);
+  if (!agg || !agg.n) return (j.pessoas || 0) * base;
+  return agg.s || 0;
+}
+
 function etiquetaJantar(j) {
   return (j.title && j.title.trim()) ? j.title.trim() : (j.dt || `Jantar #${j.id}`);
 }
-
-// verifica se já há movimentos associados a este jantar
 function jantarLancado(j) {
-  const etiqueta = `Jantar — ${etiquetaJantar(j)}`;
-  const hit = db.prepare(`SELECT 1 FROM movimentos WHERE descr LIKE ? LIMIT 1`).get(`${etiqueta}%`);
+  // consideramos lançado se existir movimento de categoria 'Jantares' com descr começado por 'Jantar — <prefix> — Receita'
+  const cat = db.prepare(`SELECT id FROM categorias WHERE type='receita' AND name='Jantares'`).get();
+  if (!cat) return false;
+  const prefix = `Jantar — ${etiquetaJantar(j)} — Receita`;
+  const alt    = `Jantar ${j.dt || ('#'+j.id)} (ID:${j.id}) — Receita`; // compat antigo
+  const hit = db.prepare(`
+    SELECT 1 AS ok FROM movimentos
+    WHERE categoria_id=? AND (descr LIKE ? OR descr LIKE ?) LIMIT 1
+  `).get(cat.id, `${prefix}%`, `${alt}%`);
   return !!hit;
 }
 
-// total pago por jantar (o que interessa para o rodízio)
-function totalPagoJantarCents(jid) {
-  return db.prepare(`
-    SELECT IFNULL(SUM(pago_cents),0) AS s
-    FROM jantares_convidados WHERE jantar_id=?
-  `).get(jid).s;
-}
-
-// total de despesas do jantar (linhas lançadas no módulo Jantares)
-function despesasJantarCents(jid) {
-  return db.prepare(`
-    SELECT IFNULL(SUM(valor_cents),0) AS s
-    FROM jantares_despesas WHERE jantar_id=?
-  `).get(jid).s;
-}
-
-// GET /definicoes/rodizio
+// GET página do rodízio
 router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
     const settings = ensureSettingsRow();
 
-    // Casais (para a dropdown)
-    const casais = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
-
-    // "Em casais"
-    const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
-
-    // Movimentos (receitas, despesas)
-    const mov = db.prepare(`
+    // 1) Somas de movimentos por tipo
+    const sumMov = db.prepare(`
       SELECT
-        IFNULL(SUM(CASE WHEN c.type='receita' THEN m.valor_cents ELSE 0 END),0) AS receitas,
-        IFNULL(SUM(CASE WHEN c.type='despesa' THEN m.valor_cents ELSE 0 END),0)  AS despesas
-      FROM movimentos m
-      JOIN categorias c ON c.id=m.categoria_id
-    `).get();
+        SUM(CASE WHEN c.type='receita' THEN m.valor_cents ELSE 0 END) AS receitas,
+        SUM(CASE WHEN c.type='despesa' THEN m.valor_cents ELSE 0 END) AS despesas
+      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
+    `).get() || { receitas:0, despesas:0 };
 
-    const peditorios = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s;
-    const patrocinios = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s;
+    const peditorios = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s || 0;
+    const patrocinios = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s || 0;
 
-    const saldoMovimentos = (mov.receitas || 0) - (mov.despesas || 0) + (peditorios || 0) + (patrocinios || 0);
+    const saldoMovimentos = (sumMov.receitas || 0) - (sumMov.despesas || 0) + peditorios + patrocinios;
 
-    // Jantares pendentes -> lucro projetado baseado no TOTAL PAGO
+    // 2) Lucro projetado (jantares pendentes)
     const jantares = db.prepare(`
-      SELECT id, dt, title
-      FROM jantares
-      ORDER BY COALESCE(dt,'9999-99-99') DESC, id DESC
+      SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents
+      FROM jantares ORDER BY id
     `).all();
 
-    let lucroProjetadoCents = 0;
+    let lucroProjetado = 0;
     for (const j of jantares) {
-      if (jantarLancado(j)) continue; // só conta os não lançados
-      const pagos = totalPagoJantarCents(j.id);
-      const desps = despesasJantarCents(j.id);
-      lucroProjetadoCents += (pagos - desps);
+      if (jantarLancado(j)) continue; // só os NÃO lançados
+      const receita = receitaCalculadaDoJantar(j);
+      const lucro   = receita - (j.despesas_cents || 0);
+      lucroProjetado += lucro;
     }
 
-    const saldoProjetado = saldoMovimentos + lucroProjetadoCents;
+    // 3) Saldo projetado
+    const saldoProjetado = saldoMovimentos + lucroProjetado;
 
-    // Resto teórico e disponível (ver explicação no chat)
+    // 4) Total “em casais”
+    const totalCasa = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s || 0;
+
+    // 5) Resto teórico e disponível
+    const restoTeorico = Math.max(0, saldoProjetado - totalCasa);
+
+    const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s || 0;
+    const restoDisponivel = Math.max(0, restoTeorico - aplicadoResto);
+
+    // dados auxiliares para os forms
+    const casais = db.prepare(`SELECT id, nome FROM casais ORDER BY id`).all();
     const blocoCents = Number(settings.rodizio_bloco_cents ?? 500000);
-
-    const aplicadoRestoCents = db.prepare(`
-      SELECT IFNULL(SUM(valor_cents),0) AS s
-      FROM rodizio_aplicacoes
-    `).get().s;
-
-    const restoTeoricoCents    = Math.max(0, saldoProjetado - totalCasaCents);
-    const restoDisponivelCents = Math.max(0, saldoMovimentos - totalCasaCents) - (aplicadoRestoCents || 0);
-
-    // blocos completos (apenas para exibir)
-    const blocosCompletos = blocoCents > 0 ? Math.floor(totalCasaCents / blocoCents) : 0;
-
-    // histórico das aplicações
-    const historico = db.prepare(`
-      SELECT a.id, a.dt, a.valor_cents, c.nome AS casal_nome
-      FROM rodizio_aplicacoes a
-      JOIN casais c ON c.id=a.casal_id
-      ORDER BY a.id DESC
-    `).all();
+    const inicioId   = settings.rodizio_inicio_casal_id || null;
 
     res.render('def_rodizio', {
       title: 'Rodízio',
-      settings,
-      casais,
       euros,
-      resumo: {
-        totalCasaCents,
-        blocoCents,
-        blocosCompletos,
+      // cartões
+      cards: {
         saldoMovimentos,
-        lucroProjetadoCents,
+        lucroProjetado,
         saldoProjetado,
-        restoTeoricoCents,
-        aplicadoRestoCents,
-        restoDisponivelCents
+        totalCasa,
+        restoTeorico,
+        aplicadoResto,
+        restoDisponivel
       },
-      historico,
+      // detalhe do saldo de movimentos
+      detalhe: {
+        receitas: (sumMov.receitas || 0),
+        despesas: (sumMov.despesas || 0),
+        peditorios,
+        patrocinios
+      },
+      // forms
+      blocoCents,
+      inicioId,
+      casais,
+      // histórico de aplicações
+      historico: db.prepare(`
+        SELECT a.id, a.dt, a.valor_cents, c.nome AS casal_nome
+        FROM rodizio_aplicacoes a JOIN casais c ON c.id=a.casal_id
+        ORDER BY a.id DESC
+      `).all(),
       msg: req.query.msg || null,
       err: req.query.err || null
     });
   } catch (e) { next(e); }
 });
 
-// POST /definicoes/rodizio  (guardar tamanho do bloco e início do rodízio)
+// Guardar tamanho do bloco + casal de início
 router.post('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
-    const blocoEuros = String(req.body.bloco ?? '').trim();
-    const blocoCents = Math.round(Number(blocoEuros.replace(',', '.')) * 100) || 0;
+    const blocoEuros = String(req.body.bloco ?? '').trim().replace(/\s/g,'').replace('.', '').replace(',', '.');
+    const blocoCents = Math.round((Number(blocoEuros) || 0) * 100);
     const inicioId   = req.body.inicio_casal_id ? Number(req.body.inicio_casal_id) : null;
 
     ensureSettingsRow();
@@ -229,7 +239,7 @@ router.post('/definicoes/rodizio', requireAuth, (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// POST /definicoes/rodizio/aplicar  (aplicar parte do resto a um casal)
+// Aplicar parte do resto a um casal
 router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
   try {
     const casal_id = Number(req.body.casal_id || 0) || null;
@@ -239,23 +249,34 @@ router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
     if (!casal_id) return res.redirect('/definicoes/rodizio?err=Escolhe+um+casal');
     if (valor_cents <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
 
-    // limite pelo resto disponível REAL (não inclui lucro projetado)
-    const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
-    const mov = db.prepare(`
+    // Recalcular resto disponível com as MESMAS fórmulas:
+    const sumMov = db.prepare(`
       SELECT
-        IFNULL(SUM(CASE WHEN c.type='receita' THEN m.valor_cents ELSE 0 END),0) AS receitas,
-        IFNULL(SUM(CASE WHEN c.type='despesa' THEN m.valor_cents ELSE 0 END),0)  AS despesas
-      FROM movimentos m
-      JOIN categorias c ON c.id=m.categoria_id
-    `).get();
-    const peditorios = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s;
-    const patrocinios = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s;
-    const saldoMovimentos = (mov.receitas || 0) - (mov.despesas || 0) + (peditorios || 0) + (patrocinios || 0);
+        SUM(CASE WHEN c.type='receita' THEN m.valor_cents ELSE 0 END) AS receitas,
+        SUM(CASE WHEN c.type='despesa' THEN m.valor_cents ELSE 0 END) AS despesas
+      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
+    `).get() || { receitas:0, despesas:0 };
+    const peditorios = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s || 0;
+    const patrocinios = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s || 0;
+    const saldoMovimentos = (sumMov.receitas||0) - (sumMov.despesas||0) + peditorios + patrocinios;
 
-    const aplicadoRestoCents = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
-    const restoDisponivelCents = Math.max(0, saldoMovimentos - totalCasaCents) - (aplicadoRestoCents || 0);
+    const jantares = db.prepare(`
+      SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents
+      FROM jantares
+    `).all();
+    let lucroProjetado = 0;
+    for (const j of jantares) {
+      if (jantarLancado(j)) continue;
+      const receita = receitaCalculadaDoJantar(j);
+      lucroProjetado += (receita - (j.despesas_cents || 0));
+    }
+    const saldoProjetado = saldoMovimentos + lucroProjetado;
+    const totalCasa = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s || 0;
+    const restoTeorico = Math.max(0, saldoProjetado - totalCasa);
+    const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s || 0;
+    const restoDisponivel = Math.max(0, restoTeorico - aplicadoResto);
 
-    if (valor_cents > restoDisponivelCents) {
+    if (valor_cents > restoDisponivel) {
       return res.redirect('/definicoes/rodizio?err=Valor+excede+o+resto+disponível');
     }
 
@@ -264,7 +285,7 @@ router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
       VALUES (?, ?)
     `).run(casal_id, valor_cents);
 
-    return res.redirect('/definicoes/rodizio?msg=Aplicação+registada');
+    res.redirect('/definicoes/rodizio?msg=Aplicação+registada');
   } catch (e) { next(e); }
 });
 
