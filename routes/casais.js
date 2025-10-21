@@ -5,46 +5,96 @@ import { requireAuth } from '../middleware/requireAuth.js';
 
 const router = Router();
 
-/* ------------------ helpers ------------------ */
+/* ============================= helpers ============================= */
 
-// soma defensiva (se a tabela não existir, devolve 0)
-function sumOr0(sql) {
-  try { return db.prepare(sql).get()?.s ?? 0; } catch { return 0; }
+function sumOr0(sql, ...params) {
+  try {
+    const row = db.prepare(sql).get(...params);
+    return row?.s ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
-// etiqueta amigável do jantar
-function etiquetaJantar(j) {
-  return (j.title && j.title.trim()) ? j.title.trim() : (j.dt || `Jantar #${j.id}`);
+// total pago (todos os jantares)
+function sumPagoJantares() {
+  return sumOr0(`SELECT COALESCE(SUM(pago_cents),0) AS s FROM jantares_convidados`);
 }
 
-// receita *paga* do jantar (usa SUM(pago_cents)); se não houver convidados, faz fallback
-function receitaPagaJantar(j) {
-  const agg = db.prepare(`
-    SELECT COUNT(*) AS n, COALESCE(SUM(pago_cents), 0) AS s
-    FROM jantares_convidados
-    WHERE jantar_id=?
-  `).get(j.id);
-  if (agg && agg.n > 0) return agg.s || 0;
-  // modo antigo (sem convidados registados)
-  return (j.pessoas || 0) * (j.valor_pessoa_cents || 0);
+// total pago por jantar
+function sumPagoPorJantar(jantarId) {
+  return sumOr0(
+    `SELECT COALESCE(SUM(pago_cents),0) AS s FROM jantares_convidados WHERE jantar_id=?`,
+    jantarId
+  );
 }
 
-// considerar “lançado” se existir movimento de Receita do jantar
-function jantarLancado(j) {
-  const cat = db.prepare(`SELECT id FROM categorias WHERE type='receita' AND name='Jantares'`).get();
-  if (!cat?.id) return false;
-  const novo = `Jantar — ${etiquetaJantar(j)} — Receita`;
-  const antigo = `Jantar ${j.dt || ('#'+j.id)} (ID:${j.id}) — Receita`;
-  const hit = db.prepare(`
-    SELECT 1 ok FROM movimentos
-    WHERE categoria_id=? AND (descr LIKE ? OR descr LIKE ?) LIMIT 1
-  `).get(cat.id, `${novo}%`, `${antigo}%`);
-  return !!hit?.ok;
+// despesas totais registadas nos jantares
+function sumDespesasJantares() {
+  return sumOr0(`SELECT COALESCE(SUM(despesas_cents),0) AS s FROM jantares`);
 }
 
-/* ------------------ rotas ------------------ */
+// saldo em “movimentos” (receitas − despesas) + peditórios + patrocínios (entregue)
+function calcularSaldoMovimentos() {
+  const recMov  = sumOr0(`
+    SELECT COALESCE(SUM(m.valor_cents),0) AS s
+    FROM movimentos m
+    JOIN categorias c ON c.id=m.categoria_id
+    WHERE c.type='receita'
+  `);
+  const despMov = sumOr0(`
+    SELECT COALESCE(SUM(m.valor_cents),0) AS s
+    FROM movimentos m
+    JOIN categorias c ON c.id=m.categoria_id
+    WHERE c.type='despesa'
+  `);
+  const ped     = sumOr0(`SELECT COALESCE(SUM(valor_cents),0) AS s FROM peditorios`);
+  const patEnt  = sumOr0(`SELECT COALESCE(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`);
+  return recMov - despMov + ped + patEnt;
+}
 
-// debug simples
+// tentativa razoável para saber se um jantar já foi lançado para movimentos:
+// procura um movimento de RECEITA na data do jantar cuja categoria seja “Jantar…” e
+// a descrição comece por “Jantar — ”
+function isJantarLancado(j) {
+  if (!j.dt) return false;
+  try {
+    const row = db.prepare(`
+      SELECT 1 AS ok
+      FROM movimentos m
+      JOIN categorias c ON c.id=m.categoria_id
+      WHERE c.type='receita'
+        AND (c.name LIKE 'Jantar%' OR c.name LIKE 'Jantares%')
+        AND m.dt IS ?
+        AND (m.descr LIKE 'Jantar — %' OR m.descr LIKE 'Jantar%')
+      LIMIT 1
+    `).get(j.dt);
+    return !!row?.ok;
+  } catch {
+    return false;
+  }
+}
+
+// lucro projetado apenas dos jantares ainda NÃO lançados:
+// soma (total pago pelos convidados desse jantar − despesas_cents do jantar)
+function calcularLucroProjetadoJantaresPendentes() {
+  let total = 0;
+  const jantares = db.prepare(`
+    SELECT id, dt, COALESCE(despesas_cents,0) AS despesas_cents
+    FROM jantares
+  `).all();
+
+  for (const j of jantares) {
+    if (isJantarLancado(j)) continue;
+    const pago = sumPagoPorJantar(j.id);
+    total += (pago - (j.despesas_cents || 0));
+  }
+  return total;
+}
+
+/* ============================ rotas base ============================ */
+
+// debug
 router.get('/casais/ping', (_req, res) => res.type('text').send('ok'));
 
 /* LISTAR */
@@ -76,7 +126,8 @@ router.get('/casais/:id/edit', requireAuth, (req, res, next) => {
   try {
     const c = db.prepare(`
       SELECT id, nome, COALESCE(valor_casa_cents,0) AS valor_casa_cents
-      FROM casais WHERE id=?
+      FROM casais
+      WHERE id=?
     `).get(req.params.id);
     if (!c) return res.status(404).send('Casal não encontrado');
     res.render('casais_edit', { c, euros });
@@ -99,24 +150,38 @@ router.post('/casais/:id/delete', requireAuth, (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-/* ========== RODÍZIO (distribuição por blocos) ========== */
-/**
- * Fórmulas:
- *  - saldoMovimentos = receitas(mov) − despesas(mov) + peditórios + patrocínios
- *  - lucroProjetado  = Σ (receita paga − despesas) dos jantares NÃO lançados
- *  - saldoProjetado  = saldoMovimentos + lucroProjetado
- *  - blocosTotais    = floor(saldoProjetado / bloco)
- *  - novosBlocos     = max(blocosTotais − blocks_aplicados, 0)
- *  - resto           = saldoProjetado − blocosTotais × bloco
- */
+/* ======================= RODÍZIO (blocos) =======================
+
+Fórmula usada:
+- saldoMov = receitas(movimentos) − despesas(movimentos) + peditórios + patrocínios
+- lucroProjPendentes = Σ (total pago do jantar − despesas do jantar) [apenas jantares não lançados]
+- saldoProjetado = saldoMov + lucroProjPendentes
+- blocosTotais = floor(saldoProjetado / bloco)
+- restoTeorico = saldoProjetado − (blocosTotais * bloco)
+
+Distribuição: apenas dos blocos NOVOS (blocosTotais − blocksAplicados),
+respeitando o início configurado.
+================================================================= */
 
 // ecrã do rodízio
 router.get('/casais/rodizio', requireAuth, (req, res, next) => {
   try {
     const st = db.prepare('SELECT * FROM settings WHERE id=1').get() || {};
-    const bloco = Number(st.rodizio_bloco_cents ?? 500000);        // 5.000 €
-    const inicioId = st.rodizio_inicio_casal_id ?? null;
-    const aplicados = Number(st.rodizio_blocks_aplicados ?? 0);
+    const bloco      = Number(st.rodizio_bloco_cents ?? 500000); // 5.000 €
+    const inicioId   = st.rodizio_inicio_casal_id ?? null;
+    const aplicados  = Number(st.rodizio_blocks_aplicados ?? 0);
+
+    // saldo de movimentos + patrocínios + peditórios
+    const saldoMov = calcularSaldoMovimentos();
+
+    // lucro projetado só dos jantares PENDENTES (receita = total pago)
+    const lucroProjPendentes = calcularLucroProjetadoJantaresPendentes();
+
+    const saldoProjetado = saldoMov + lucroProjPendentes;
+
+    const blocosTotais    = bloco > 0 ? Math.floor(saldoProjetado / bloco) : 0;
+    const restoTeorico    = saldoProjetado - blocosTotais * bloco;
+    const novosBlocos     = Math.max(blocosTotais - aplicados, 0);
 
     const casais = db.prepare(`
       SELECT id, nome, COALESCE(valor_casa_cents,0) AS atual
@@ -124,48 +189,11 @@ router.get('/casais/rodizio', requireAuth, (req, res, next) => {
       ORDER BY id
     `).all();
 
-    // 1) saldo de movimentos (com peditórios e patrocínios)
-    const recMov  = sumOr0(`SELECT COALESCE(SUM(m.valor_cents),0) AS s
-                            FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-                            WHERE c.type='receita'`);
-    const despMov = sumOr0(`SELECT COALESCE(SUM(m.valor_cents),0) AS s
-                            FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-                            WHERE c.type='despesa'`);
-    const ped     = sumOr0(`SELECT COALESCE(SUM(valor_cents),0) AS s FROM peditorios`);
-    const patEnt  = sumOr0(`SELECT COALESCE(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`);
-    const saldoMovimentos = recMov - despMov + ped + patEnt;
-
-    // 2) lucro projetado dos jantares (pendentes) — usa o que foi PAGO
-    const jantares = db.prepare(`
-      SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents
-      FROM jantares
-      ORDER BY id
-    `).all();
-
-    let lucroProjetado = 0;
-    for (const j of jantares) {
-      if (jantarLancado(j)) continue;
-      const receitaPaga = receitaPagaJantar(j);
-      lucroProjetado += (receitaPaga - (j.despesas_cents || 0));
-    }
-
-    // 3) saldo projetado
-    const saldoProjetado = saldoMovimentos + lucroProjetado;
-
-    // 4) blocos/novo resto
-    let blocosTotais = 0, novosBlocos = 0, resto = saldoProjetado;
-    if (bloco > 0) {
-      blocosTotais = Math.floor(saldoProjetado / bloco);
-      novosBlocos  = Math.max(blocosTotais - aplicados, 0);
-      resto        = saldoProjetado - blocosTotais * bloco;
-    }
-
-    // 5) distribuição circular dos novos blocos
+    // roda a atribuição a partir do casal inicial
+    const startIdx = Math.max(0, inicioId ? casais.findIndex(c => c.id === inicioId) : 0);
     const atribuicoes = Array(casais.length).fill(0);
-    if (casais.length && novosBlocos > 0) {
-      let i = Math.max(0, inicioId ? casais.findIndex(c => c.id === inicioId) : 0);
-      if (i < 0) i = 0;
-      for (let k = 0; k < novosBlocos; k++, i = (i + 1) % casais.length) {
+    if (casais.length > 0) {
+      for (let k = 0, i = startIdx; k < novosBlocos; k++, i = (i + 1) % casais.length) {
         atribuicoes[i] += 1;
       }
     }
@@ -173,16 +201,23 @@ router.get('/casais/rodizio', requireAuth, (req, res, next) => {
     const linhas = casais.map((c, idx) => ({
       ...c,
       novos_blocks: atribuicoes[idx],
-      alvo: c.atual + atribuicoes[idx] * (bloco > 0 ? bloco : 0)
+      alvo: c.atual + atribuicoes[idx] * bloco
     }));
 
+    // Aliases para a view antiga (evita crash):
+    // - blocosCompletos (== blocosTotais)
+    // - resto (== restoTeorico)
     res.render('casais_rodizio', {
       linhas,
       bloco,
+      inicioId,
+      // nomes "novos"
       blocosTotais,
       novosBlocos,
-      resto,
-      inicioId,
+      restoTeorico,
+      // aliases esperados pela EJS antiga
+      blocosCompletos: blocosTotais,
+      resto: restoTeorico,
       euros,
       user: req.session.user
     });
@@ -202,52 +237,43 @@ router.post('/casais/rodizio/inicio', requireAuth, (req, res, next) => {
 router.post('/casais/rodizio/aplicar', requireAuth, (req, res, next) => {
   try {
     const st = db.prepare('SELECT * FROM settings WHERE id=1').get() || {};
-    const bloco = Number(st.rodizio_bloco_cents ?? 500000);
-    const inicioId = st.rodizio_inicio_casal_id ?? null;
-    const aplicados = Number(st.rodizio_blocks_aplicados ?? 0);
+    const bloco      = Number(st.rodizio_bloco_cents ?? 500000);
+    const inicioId   = st.rodizio_inicio_casal_id ?? null;
+    const aplicados  = Number(st.rodizio_blocks_aplicados ?? 0);
+
+    const saldoMov           = calcularSaldoMovimentos();
+    const lucroProjPendentes = calcularLucroProjetadoJantaresPendentes();
+    const saldoProjetado     = saldoMov + lucroProjPendentes;
+
+    const blocosTotais = bloco > 0 ? Math.floor(saldoProjetado / bloco) : 0;
+    const novosBlocos  = Math.max(blocosTotais - aplicados, 0);
+    if (novosBlocos === 0) return res.redirect('/casais/rodizio');
 
     const casais = db.prepare(`SELECT id FROM casais ORDER BY id`).all();
-    if (!casais.length || bloco <= 0) return res.redirect('/casais/rodizio');
+    if (casais.length === 0) return res.redirect('/casais/rodizio');
 
-    // (re)calcular como no GET
-    const recMov  = sumOr0(`SELECT COALESCE(SUM(m.valor_cents),0) AS s
-                            FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-                            WHERE c.type='receita'`);
-    const despMov = sumOr0(`SELECT COALESCE(SUM(m.valor_cents),0) AS s
-                            FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-                            WHERE c.type='despesa'`);
-    const ped     = sumOr0(`SELECT COALESCE(SUM(valor_cents),0) AS s FROM peditorios`);
-    const patEnt  = sumOr0(`SELECT COALESCE(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`);
-    const saldoMovimentos = recMov - despMov + ped + patEnt;
-
-    const jantares = db.prepare(`SELECT id, dt, title, pessoas, valor_pessoa_cents, despesas_cents FROM jantares`).all();
-    let lucroProjetado = 0;
-    for (const j of jantares) {
-      if (jantarLancado(j)) continue;
-      const receitaPaga = receitaPagaJantar(j);
-      lucroProjetado += (receitaPaga - (j.despesas_cents || 0));
-    }
-    const saldoProjetado = saldoMovimentos + lucroProjetado;
-
-    const blocosTotais = Math.floor(saldoProjetado / bloco);
-    const novosBlocos  = Math.max(blocosTotais - aplicados, 0);
-    if (novosBlocos <= 0) return res.redirect('/casais/rodizio');
-
+    const startIdx = Math.max(0, inicioId ? casais.findIndex(c => c.id === inicioId) : 0);
     const atribuicoes = Array(casais.length).fill(0);
-    let i = Math.max(0, inicioId ? casais.findIndex(c => c.id === inicioId) : 0);
-    if (i < 0) i = 0;
-    for (let k = 0; k < novosBlocos; k++, i = (i + 1) % casais.length) atribuicoes[i] += 1;
+    for (let k = 0, i = startIdx; k < novosBlocos; k++, i = (i + 1) % casais.length) {
+      atribuicoes[i] += 1;
+    }
 
     const tx = db.transaction(() => {
-      for (let idx = 0; idx < casais.length; idx++) {
-        const blocks = atribuicoes[idx];
+      for (let i = 0; i < casais.length; i++) {
+        const blocks = atribuicoes[i];
         if (blocks > 0) {
-          db.prepare(`UPDATE casais SET valor_casa_cents = valor_casa_cents + ? WHERE id=?`)
-            .run(blocks * bloco, casais[idx].id);
+          db.prepare(`
+            UPDATE casais
+               SET valor_casa_cents = valor_casa_cents + ?
+             WHERE id=?
+          `).run(blocks * bloco, casais[i].id);
         }
       }
-      db.prepare(`UPDATE settings SET rodizio_blocks_aplicados = rodizio_blocks_aplicados + ? WHERE id=1`)
-        .run(novosBlocos);
+      db.prepare(`
+        UPDATE settings
+           SET rodizio_blocks_aplicados = rodizio_blocks_aplicados + ?
+         WHERE id=1
+      `).run(novosBlocos);
     });
     tx();
 
