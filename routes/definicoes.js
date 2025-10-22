@@ -3,6 +3,8 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { ensureSettingsRow } from '../lib/settings.js';
+import { loadRodizioResumo } from '../lib/rodizio.js';
 
 const router = Router();
 
@@ -36,24 +38,6 @@ const KEYS = [
 /* =======================================================
    DEFINIÇÕES GERAIS (BRANDING + PERFIL)
 ======================================================= */
-
-// garante linha base
-function ensureSettingsRow() {
-  let row = db.prepare('SELECT * FROM settings WHERE id=1').get();
-  if (!row) {
-    db.prepare(`
-      INSERT INTO settings (id,line1,line2,primary_color,secondary_color)
-      VALUES (1,?,?,?,?)
-    `).run(
-      'Comissão de Festas',
-      'em Honra de Nossa Senhora da Graça 2026 - Vila Caiz',
-      '#1f6feb',
-      '#b58900'
-    );
-    row = db.prepare('SELECT * FROM settings WHERE id=1').get();
-  }
-  return row;
-}
 
 // GET /definicoes
 router.get('/definicoes', requireAuth, (req, res) => {
@@ -115,33 +99,16 @@ function euros(cents) {
 // GET /definicoes/rodizio
 router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
-    const settings = ensureSettingsRow();
-
-    const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
-    const recMov = db.prepare(`
-      SELECT IFNULL(SUM(m.valor_cents),0) AS s
-      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-      WHERE c.type='receita'
-    `).get().s;
-    const despMov = db.prepare(`
-      SELECT IFNULL(SUM(m.valor_cents),0) AS s
-      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-      WHERE c.type='despesa'
-    `).get().s;
-    const ped = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s;
-    const pat = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s;
-
-    const lucroProjetado = db.prepare(`
-      SELECT IFNULL(SUM((pessoas*valor_pessoa_cents)-despesas_cents),0) AS s
-      FROM jantares WHERE lancado IS NULL OR lancado=0
-    `).get().s;
-
-    const saldoMovimentos = recMov - despMov + ped + pat;
-    const saldoProjetado = saldoMovimentos + lucroProjetado;
-
-    const restoTeorico = Math.max(0, saldoProjetado - totalCasaCents);
-    const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
-    const restoDisponivel = Math.max(0, saldoMovimentos - totalCasaCents - aplicadoResto);
+    const {
+      settings,
+      saldoMovimentos,
+      lucroProjetado,
+      saldoProjetado,
+      aplicadoResto,
+      totalCasais,
+      restoTeorico,
+      restoDisponivel,
+    } = loadRodizioResumo();
 
     const casais = db.prepare(`SELECT id,nome FROM casais ORDER BY nome COLLATE NOCASE`).all();
     const historico = db.prepare(`
@@ -161,7 +128,7 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
         saldoMovimentos,
         lucroProjetado,
         saldoProjetado,
-        totalCasaCents,
+        totalCasaCents: totalCasais,
         restoTeorico,
         aplicadoResto,
         restoDisponivel,
@@ -200,22 +167,7 @@ router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
     if (!casal_id) return res.redirect('/definicoes/rodizio?err=Escolhe+um+casal');
     if (valor_cents <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
 
-    const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
-    const recMov = db.prepare(`
-      SELECT IFNULL(SUM(m.valor_cents),0) AS s
-      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-      WHERE c.type='receita'
-    `).get().s;
-    const despMov = db.prepare(`
-      SELECT IFNULL(SUM(m.valor_cents),0) AS s
-      FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-      WHERE c.type='despesa'
-    `).get().s;
-    const ped = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s;
-    const pat = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s;
-    const saldoMovimentos = recMov - despMov + ped + pat;
-    const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
-    const restoDisponivel = Math.max(0, saldoMovimentos - totalCasaCents - aplicadoResto);
+    const { restoDisponivel } = loadRodizioResumo();
 
     if (valor_cents > restoDisponivel + 5) {
       return res.redirect('/definicoes/rodizio?err=Valor+excede+o+resto+disponível');
