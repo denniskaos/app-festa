@@ -137,10 +137,11 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
     `).get().s;
 
     const saldoMovimentos = recMov - despMov + ped + pat;
-    const saldoProjetado = saldoMovimentos + lucroProjetado;
+    const saldoProjetado = Math.max(0, lucroProjetado);
 
     const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
-    const restoTeoricoBruto = Math.max(0, saldoProjetado - totalCasaCents);
+    const faltamParaCasais = Math.max(0, totalCasaCents - saldoMovimentos);
+    const restoTeoricoBruto = Math.max(0, saldoProjetado - faltamParaCasais);
     const restoTeorico = Math.max(0, restoTeoricoBruto - aplicadoResto);
     const restoDisponivel = Math.max(0, saldoMovimentos - totalCasaCents);
 
