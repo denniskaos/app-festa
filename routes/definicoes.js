@@ -137,7 +137,6 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
     `).get().s;
 
     const saldoMovimentos = recMov - despMov + ped + pat;
-    const totalCasaCents = Number(settings.rodizio_bloco_cents ?? 500000) || totalCasaRealCents;
     const saldoProjetado = Math.max(0, lucroProjetado);
 
     const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
