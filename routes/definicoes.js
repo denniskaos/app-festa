@@ -96,6 +96,12 @@ function euros(cents) {
   return ((cents || 0) / 100).toFixed(2);
 }
 
+function casaisTargetCents(settings) {
+  const raw = Number(settings?.rodizio_bloco_cents);
+  if (Number.isFinite(raw) && raw > 0) return raw;
+  return 500000;
+}
+
 // GET /definicoes/rodizio
 router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
