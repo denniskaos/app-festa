@@ -25,6 +25,14 @@ const router = Router();
       db.exec(`ALTER TABLE jantares_convidados ADD COLUMN preco_cents INTEGER`);
     }
   } catch {}
+
+  // NEW: flag "lancado" no jantar
+  try {
+    const colsJ = db.prepare(`PRAGMA table_info('jantares')`).all().map(c => c.name);
+    if (!colsJ.includes('lancado')) {
+      db.exec(`ALTER TABLE jantares ADD COLUMN lancado INTEGER NOT NULL DEFAULT 0`);
+    }
+  } catch {}
 })();
 
 /* --- Constantes/Helpers --- */
@@ -67,87 +75,44 @@ function ensureCategoriaMulti(names, type /* 'receita' | 'despesa' */) {
     const row = db.prepare(`SELECT id FROM categorias WHERE name=? AND type=?`).get(name, type);
     if (row?.id) return Number(row.id);
   }
-  const ins = db
-    .prepare(`INSERT INTO categorias (name, type, planned_cents) VALUES (?,?,0)`)
+  // cria com a primeira grafia
+  const ins = db.prepare(`INSERT INTO categorias (name, type, planned_cents) VALUES (?,?,0)`)
     .run(names[0], type);
   return Number(ins.lastInsertRowid);
 }
 
 // Recalcula e atualiza o total de despesas no jantar
 function recalcDespesas(jantar_id) {
-  const sum = db
-    .prepare(
-      `
+  const sum = db.prepare(`
     SELECT IFNULL(SUM(valor_cents),0) AS s
     FROM jantares_despesas
     WHERE jantar_id=?
-  `
-    )
-    .get(jantar_id).s;
+  `).get(jantar_id).s;
   db.prepare(`UPDATE jantares SET despesas_cents=? WHERE id=?`).run(sum, jantar_id);
   return sum;
 }
 
 // Insere movimento se não existir um igual (descr+dt+valor+categoria)
 function insertMovimentoIfNotExists({ dt, categoria_id, descr, valor_cents }) {
-  const exists = db
-    .prepare(
-      `
+  const exists = db.prepare(`
     SELECT id FROM movimentos
     WHERE dt IS ? AND categoria_id=? AND descr=? AND valor_cents=?
-  `
-    )
-    .get(dt || null, categoria_id, descr, valor_cents);
+  `).get(dt || null, categoria_id, descr, valor_cents);
   if (exists?.id) return Number(exists.id);
 
-  db.prepare(
-    `
+  db.prepare(`
     INSERT INTO movimentos (dt, categoria_id, descr, valor_cents)
     VALUES (?,?,?,?)
-  `
-  ).run(dt || null, categoria_id, descr, valor_cents);
+  `).run(dt || null, categoria_id, descr, valor_cents);
 
   return Number(db.prepare(`SELECT last_insert_rowid() AS id`).get().id);
 }
 
-// Etiqueta base para descritivos do jantar
+// etiqueta amigável do jantar para descrições
 function etiquetaJantar(j) {
-  const base =
-    (j.title && String(j.title).trim()) ||
-    (j.dt && String(j.dt).trim()) ||
-    `Jantar #${j.id}`;
-  return `Jantar — ${base}`;
-}
-
-// Receita a lançar = SOMA do "pago_cents" apenas dos convidados com presença confirmada
-function receitaLancamentoCents(jantar_id) {
-  const row = db
-    .prepare(
-      `
-    SELECT IFNULL(SUM(pago_cents), 0) AS s
-    FROM jantares_convidados
-    WHERE jantar_id = ? AND presenca = 1
-  `
-    )
-    .get(jantar_id);
-  return row?.s || 0;
-}
-
-// Verifica se já foi lançado (procura a receita com o prefixo "Jantar — ... — Receita")
-function isLancado(j) {
-  const catReceitaId = ensureCategoriaMulti(['Jantares'], 'receita');
-  const prefix = `${etiquetaJantar(j)} — Receita`;
-  const row = db
-    .prepare(
-      `
-    SELECT 1 AS ok
-    FROM movimentos
-    WHERE categoria_id = ? AND descr = ?
-    LIMIT 1
-  `
-    )
-    .get(catReceitaId, prefix);
-  return !!row?.ok;
+  if (j.title && String(j.title).trim()) return `Jantar: ${String(j.title).trim()}`;
+  if (j.dt) return `Jantar — ${j.dt}`;
+  return `Jantar #${j.id}`;
 }
 
 /* =========================================================
@@ -157,37 +122,27 @@ router.get('/jantares/:id/organizar', requireAuth, (req, res, next) => {
   try {
     const j = getJantarOr404(req.params.id);
 
-    const mesas = db
-      .prepare(
-        `
+    const mesas = db.prepare(`
       SELECT m.*,
              (SELECT COUNT(*) FROM jantares_convidados c WHERE c.mesa_id=m.id) AS ocupados
       FROM jantares_mesas m
       WHERE m.jantar_id=?
       ORDER BY m.id
-    `
-      )
-      .all(j.id);
+    `).all(j.id);
 
-    const totConvidados = db
-      .prepare(
-        `
+    const totConvidados = db.prepare(`
       SELECT COUNT(*) AS c FROM jantares_convidados WHERE jantar_id=?
-    `
-      )
-      .get(j.id).c;
+    `).get(j.id).c;
 
     res.render('jantares_org', {
-      title: `Organizar — ${j.title || j.dt || 'Jantar #' + j.id}`,
-      j: { ...j, lancado: isLancado(j) },
+      title: `Organizar — ${j.title?.trim() || j.dt || 'Jantar #' + j.id}`,
+      j: { ...j },
       mesas,
       totConvidados,
       euros,
       urls: navUrls(j.id),
     });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 /* =========================================================
@@ -196,22 +151,16 @@ router.get('/jantares/:id/organizar', requireAuth, (req, res, next) => {
 router.get('/jantares/:id/mesas', requireAuth, (req, res, next) => {
   try {
     const j = getJantarOr404(req.params.id);
-    const mesas = db
-      .prepare(
-        `
+    const mesas = db.prepare(`
       SELECT m.*,
              (SELECT COUNT(*) FROM jantares_convidados c WHERE c.mesa_id=m.id) AS ocupados
       FROM jantares_mesas m
       WHERE m.jantar_id=?
       ORDER BY m.id
-    `
-      )
-      .all(j.id);
+    `).all(j.id);
 
     res.render('jantares_mesas', { title: 'Mesas', j, mesas, urls: navUrls(j.id) });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:id/mesas', requireAuth, (req, res, next) => {
@@ -221,16 +170,12 @@ router.post('/jantares/:id/mesas', requireAuth, (req, res, next) => {
     const lugares = Math.max(0, parseInt(req.body.lugares || '0', 10));
     const notas = (req.body.notas || '').trim();
     if (!nome) return res.redirect(`/jantares/${j.id}/mesas`);
-    db.prepare(
-      `
+    db.prepare(`
       INSERT INTO jantares_mesas (jantar_id,nome,lugares,notas)
       VALUES (?,?,?,?)
-    `
-    ).run(j.id, nome, lugares, notas);
+    `).run(j.id, nome, lugares, notas);
     res.redirect(`/jantares/${j.id}/mesas`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:jid/mesas/:mid', requireAuth, (req, res, next) => {
@@ -239,17 +184,13 @@ router.post('/jantares/:jid/mesas/:mid', requireAuth, (req, res, next) => {
     const nome = String(req.body.nome || '').trim();
     const lugares = Math.max(0, parseInt(req.body.lugares || '0', 10));
     const notas = (req.body.notas || '').trim();
-    db.prepare(
-      `
+    db.prepare(`
       UPDATE jantares_mesas
          SET nome=?, lugares=?, notas=?
        WHERE id=? AND jantar_id=?
-    `
-    ).run(nome, lugares, notas, req.params.mid, req.params.jid);
+    `).run(nome, lugares, notas, req.params.mid, req.params.jid);
     res.redirect(`/jantares/${req.params.jid}/mesas`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:jid/mesas/:mid/delete', requireAuth, (req, res, next) => {
@@ -258,9 +199,7 @@ router.post('/jantares/:jid/mesas/:mid/delete', requireAuth, (req, res, next) =>
     db.prepare(`UPDATE jantares_convidados SET mesa_id=NULL WHERE mesa_id=?`).run(req.params.mid);
     db.prepare(`DELETE FROM jantares_mesas WHERE id=? AND jantar_id=?`).run(req.params.mid, req.params.jid);
     res.redirect(`/jantares/${req.params.jid}/mesas`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 /* =========================================================
@@ -270,41 +209,27 @@ router.get('/jantares/:id/convidados', requireAuth, (req, res, next) => {
   try {
     const j = getJantarOr404(req.params.id);
     const mesas = db.prepare(`SELECT * FROM jantares_mesas WHERE jantar_id=? ORDER BY id`).all(j.id);
-    const convidados = db
-      .prepare(
-        `
+    const convidados = db.prepare(`
       SELECT c.*, m.nome AS mesa_nome
       FROM jantares_convidados c
       LEFT JOIN jantares_mesas m ON m.id=c.mesa_id
       WHERE c.jantar_id=?
       ORDER BY COALESCE(m.nome, 'zzz'), c.id
-    `
-      )
-      .all(j.id);
+    `).all(j.id);
 
-    const sumPago = db
-      .prepare(
-        `
+    const sumPago = db.prepare(`
       SELECT IFNULL(SUM(pago_cents),0) AS s
       FROM jantares_convidados
-      WHERE jantar_id=?
-    `
-      )
-      .get(j.id).s;
+      WHERE jantar_id=? AND presenca=1
+    `).get(j.id).s;
 
     res.render('jantares_convidados', {
-      title: `Convidados — ${j.title || j.dt || ('Jantar #' + j.id)}`,
-      j,
-      mesas,
-      convidados,
-      sumPago,
-      euros,
+      title: 'Convidados',
+      j, mesas, convidados, sumPago, euros,
       urls: navUrls(j.id),
       MENU_LABEL,
     });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:id/convidados', requireAuth, (req, res, next) => {
@@ -314,7 +239,7 @@ router.post('/jantares/:id/convidados', requireAuth, (req, res, next) => {
     if (!nome) return res.redirect(`/jantares/${j.id}/convidados`);
     const mesa_id = req.body.mesa_id ? Number(req.body.mesa_id) : null;
     const contacto = (req.body.contacto || '').trim();
-    const menu = req.body.menu || 'normal';
+    const menu = (req.body.menu || 'normal');
     const pedido_especial = (req.body.pedido_especial || '').trim();
     const pago_cents = cents(req.body.pago || 0);
 
@@ -322,18 +247,14 @@ router.post('/jantares/:id/convidados', requireAuth, (req, res, next) => {
     const precoTxt = String(req.body.preco ?? '').trim();
     if (precoTxt !== '') preco_cents = cents(precoTxt);
 
-    db.prepare(
-      `
+    db.prepare(`
       INSERT INTO jantares_convidados
       (jantar_id, mesa_id, nome, contacto, menu, pedido_especial, pago_cents, presenca, preco_cents)
       VALUES (?,?,?,?,?,?,?,?,?)
-    `
-    ).run(j.id, mesa_id, nome, contacto, menu, pedido_especial, pago_cents, 0, preco_cents);
+    `).run(j.id, mesa_id, nome, contacto, menu, pedido_especial, pago_cents, 0, preco_cents);
 
     res.redirect(`/jantares/${j.id}/convidados`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:jid/convidados/:cid', requireAuth, (req, res, next) => {
@@ -342,7 +263,7 @@ router.post('/jantares/:jid/convidados/:cid', requireAuth, (req, res, next) => {
     const mesa_id = req.body.mesa_id ? Number(req.body.mesa_id) : null;
     const nome = String(req.body.nome || '').trim();
     const contacto = (req.body.contacto || '').trim();
-    const menu = req.body.menu || 'normal';
+    const menu = (req.body.menu || 'normal');
     const pedido_especial = (req.body.pedido_especial || '').trim();
     const pago_cents = cents(req.body.pago || 0);
     const presenca = req.body.presenca ? 1 : 0;
@@ -351,8 +272,7 @@ router.post('/jantares/:jid/convidados/:cid', requireAuth, (req, res, next) => {
     const precoTxt = String(req.body.preco ?? '').trim();
     if (precoTxt !== '') preco_cents = cents(precoTxt);
 
-    db.prepare(
-      `
+    db.prepare(`
       UPDATE jantares_convidados
          SET mesa_id=?,
              nome=?,
@@ -363,37 +283,18 @@ router.post('/jantares/:jid/convidados/:cid', requireAuth, (req, res, next) => {
              presenca=?,
              preco_cents=?
        WHERE id=? AND jantar_id=?
-    `
-    ).run(
-      mesa_id,
-      nome,
-      contacto,
-      menu,
-      pedido_especial,
-      pago_cents,
-      presenca,
-      preco_cents,
-      req.params.cid,
-      req.params.jid
-    );
+    `).run(mesa_id, nome, contacto, menu, pedido_especial, pago_cents, presenca, preco_cents, req.params.cid, req.params.jid);
 
     res.redirect(`/jantares/${req.params.jid}/convidados`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:jid/convidados/:cid/delete', requireAuth, (req, res, next) => {
   try {
     getJantarOr404(req.params.jid);
-    db.prepare(`DELETE FROM jantares_convidados WHERE id=? AND jantar_id=?`).run(
-      req.params.cid,
-      req.params.jid
-    );
+    db.prepare(`DELETE FROM jantares_convidados WHERE id=? AND jantar_id=?`).run(req.params.cid, req.params.jid);
     res.redirect(`/jantares/${req.params.jid}/convidados`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 /* =========================================================
@@ -402,29 +303,20 @@ router.post('/jantares/:jid/convidados/:cid/delete', requireAuth, (req, res, nex
 router.get('/jantares/:id/despesas', requireAuth, (req, res, next) => {
   try {
     const j = getJantarOr404(req.params.id);
-    const linhas = db
-      .prepare(
-        `
+    const linhas = db.prepare(`
       SELECT id, descr, valor_cents
       FROM jantares_despesas
       WHERE jantar_id=?
       ORDER BY id
-    `
-      )
-      .all(j.id);
+    `).all(j.id);
     const total = linhas.reduce((a, r) => a + (r.valor_cents || 0), 0);
 
     res.render('jantares_despesas', {
       title: 'Despesas',
-      j,
-      linhas,
-      total,
-      euros,
-      urls: navUrls(j.id),
+      j, linhas, total, euros,
+      urls: navUrls(j.id)
     });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:id/despesas', requireAuth, (req, res, next) => {
@@ -433,18 +325,14 @@ router.post('/jantares/:id/despesas', requireAuth, (req, res, next) => {
     const descr = String(req.body.descr || '').trim();
     const valor_cents = cents(req.body.valor || 0);
     if (descr && valor_cents) {
-      db.prepare(
-        `
+      db.prepare(`
         INSERT INTO jantares_despesas (jantar_id, descr, valor_cents)
         VALUES (?,?,?)
-      `
-      ).run(j.id, descr, valor_cents);
+      `).run(j.id, descr, valor_cents);
       recalcDespesas(j.id);
     }
     res.redirect(`/jantares/${j.id}/despesas`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:jid/despesas/:did', requireAuth, (req, res, next) => {
@@ -452,37 +340,29 @@ router.post('/jantares/:jid/despesas/:did', requireAuth, (req, res, next) => {
     const j = getJantarOr404(req.params.jid);
     const descr = String(req.body.descr || '').trim();
     const valor_cents = cents(req.body.valor || 0);
-    db.prepare(
-      `
+    db.prepare(`
       UPDATE jantares_despesas
          SET descr=?, valor_cents=?
        WHERE id=? AND jantar_id=?
-    `
-    ).run(descr, valor_cents, req.params.did, j.id);
+    `).run(descr, valor_cents, req.params.did, j.id);
     recalcDespesas(j.id);
     res.redirect(`/jantares/${j.id}/despesas`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 router.post('/jantares/:jid/despesas/:did/delete', requireAuth, (req, res, next) => {
   try {
     const j = getJantarOr404(req.params.jid);
-    db.prepare(`DELETE FROM jantares_despesas WHERE id=? AND jantar_id=?`).run(
-      req.params.did,
-      j.id
-    );
+    db.prepare(`DELETE FROM jantares_despesas WHERE id=? AND jantar_id=?`).run(req.params.did, j.id);
     recalcDespesas(j.id);
     res.redirect(`/jantares/${j.id}/despesas`);
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 /* =========================================================
    LANÇAR MOVIMENTOS (GET/POST + aliases)
    ========================================================= */
+// Lança **apenas** o que foi pago e confirmado (presença=1) + despesas linha-a-linha
 function lancarMovimentos(j) {
   const dtMov = j.dt || null;
   const catReceitaId = ensureCategoriaMulti(['Jantares'], 'receita');
@@ -490,28 +370,29 @@ function lancarMovimentos(j) {
 
   const prefix = etiquetaJantar(j);
 
-  // Receita (apenas valores pagos + presença confirmada)
-  const receita_cents = receitaLancamentoCents(j.id);
+  // RECEITA: só pagos com presença confirmada
+  const receita_cents = db.prepare(`
+    SELECT COALESCE(SUM(pago_cents),0) AS s
+    FROM jantares_convidados
+    WHERE jantar_id=? AND presenca=1
+  `).get(j.id).s;
+
   if (receita_cents > 0) {
     const descrR = `${prefix} — Receita`;
     insertMovimentoIfNotExists({
       dt: dtMov,
       categoria_id: catReceitaId,
       descr: descrR,
-      valor_cents: receita_cents,
+      valor_cents: receita_cents
     });
   }
 
-  // Despesas (cada linha vira 1 movimento)
-  const linhas = db
-    .prepare(
-      `
+  // DESPESAS (cada linha = 1 movimento)
+  const linhas = db.prepare(`
     SELECT descr, valor_cents
     FROM jantares_despesas
     WHERE jantar_id=?
-  `
-    )
-    .all(j.id);
+  `).all(j.id);
 
   for (const ln of linhas) {
     if (!ln.valor_cents) continue;
@@ -520,13 +401,13 @@ function lancarMovimentos(j) {
       dt: dtMov,
       categoria_id: catDespesaId,
       descr: descrD,
-      valor_cents: ln.valor_cents,
+      valor_cents: ln.valor_cents
     });
   }
 
   return {
     receita_cents,
-    despesas_cents: linhas.reduce((a, r) => a + (r.valor_cents || 0), 0),
+    despesas_cents: linhas.reduce((a, r) => a + (r.valor_cents || 0), 0)
   };
 }
 
@@ -534,18 +415,15 @@ function handleLancar(req, res, next) {
   try {
     const j = getJantarOr404(req.params.id || req.params.jid);
     const resumo = lancarMovimentos(j);
-    const label = (j.title && j.title.trim()) || j.dt || `#${j.id}`;
-    return res.redirect(
-      303,
-      `/movimentos?msg=${encodeURIComponent(
-        `Lançado: Jantar — ${label} (receita = pagos com presença) € ${(
-          resumo.receita_cents / 100
-        ).toFixed(2)} e despesas € ${(resumo.despesas_cents / 100).toFixed(2)}`
-      )}`
-    );
-  } catch (e) {
-    next(e);
-  }
+
+    // marca como lançado
+    db.prepare(`UPDATE jantares SET lancado=1 WHERE id=?`).run(j.id);
+
+    // 303 → não repete POST ao voltar
+    return res.redirect(303, `/movimentos?msg=${encodeURIComponent(
+      `Lançado: ${etiquetaJantar(j)} — receita € ${(resumo.receita_cents/100).toFixed(2)} e despesas € ${(resumo.despesas_cents/100).toFixed(2)}`
+    )}`);
+  } catch (e) { next(e); }
 }
 
 // Endpoints primários
@@ -564,27 +442,19 @@ router.get('/jantares/:id/mesas/print', requireAuth, (req, res, next) => {
     const j = getJantarOr404(req.params.id);
     const settings = getSettings();
 
-    const mesas = db
-      .prepare(
-        `
+    const mesas = db.prepare(`
       SELECT id, nome, lugares, notas
       FROM jantares_mesas
       WHERE jantar_id=?
       ORDER BY id
-    `
-      )
-      .all(j.id);
+    `).all(j.id);
 
-    const convidadosPorJantar = db
-      .prepare(
-        `
+    const convidadosPorJantar = db.prepare(`
       SELECT id, mesa_id, nome, contacto, menu, pedido_especial, pago_cents
       FROM jantares_convidados
       WHERE jantar_id=?
       ORDER BY id
-    `
-      )
-      .all(j.id);
+    `).all(j.id);
 
     const byMesa = new Map();
     for (const m of mesas) byMesa.set(m.id, []);
@@ -594,7 +464,7 @@ router.get('/jantares/:id/mesas/print', requireAuth, (req, res, next) => {
 
     const mesasOut = mesas.map(m => {
       const lst = byMesa.get(m.id) || [];
-      const contagem = { normal: 0, vegetariano: 0, sem_gluten: 0, infantil: 0, outro: 0 };
+      const contagem = { normal:0, vegetariano:0, sem_gluten:0, infantil:0, outro:0 };
       for (const c of lst) contagem[c.menu] = (contagem[c.menu] || 0) + 1;
       return { ...m, convidados: lst, contagem };
     });
@@ -608,8 +478,8 @@ router.get('/jantares/:id/mesas/print', requireAuth, (req, res, next) => {
         pago_cents: c.pago_cents,
       }));
 
-    const totais = { normal: 0, vegetariano: 0, sem_gluten: 0, infantil: 0, outro: 0 };
-    for (const m of mesasOut) for (const k of Object.keys(totais)) totais[k] += m.contagem[k] || 0;
+    const totais = { normal:0, vegetariano:0, sem_gluten:0, infantil:0, outro:0 };
+    for (const m of mesasOut) for (const k of Object.keys(totais)) totais[k] += (m.contagem[k] || 0);
     for (const s of semMesa) totais[s.menu] = (totais[s.menu] || 0) + 1;
 
     res.render('jantares_mesas_print', {
@@ -623,9 +493,7 @@ router.get('/jantares/:id/mesas/print', requireAuth, (req, res, next) => {
       totais,
       now: new Date(),
     });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 export default router;
