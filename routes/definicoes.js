@@ -139,10 +139,10 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
     const saldoMovimentos = recMov - despMov + ped + pat;
     const saldoProjetado = saldoMovimentos + lucroProjetado;
 
-    const restoTeorico = Math.max(0, saldoProjetado - totalCasaCents);
     const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
-    const baseSaldoParaResto = Math.min(saldoMovimentos, saldoProjetado);
-    const restoDisponivel = Math.max(0, baseSaldoParaResto - totalCasaCents - aplicadoResto);
+    const restoTeoricoBruto = Math.max(0, saldoProjetado - totalCasaCents);
+    const restoTeorico = Math.max(0, restoTeoricoBruto - aplicadoResto);
+    const restoDisponivel = Math.max(0, saldoMovimentos - totalCasaCents);
 
     const casais = db.prepare(`SELECT id,nome FROM casais ORDER BY nome COLLATE NOCASE`).all();
     const historico = db.prepare(`
@@ -215,14 +215,7 @@ router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
     const ped = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s;
     const pat = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s;
     const saldoMovimentos = recMov - despMov + ped + pat;
-    const lucroProjetado = db.prepare(`
-      SELECT IFNULL(SUM((pessoas*valor_pessoa_cents)-despesas_cents),0) AS s
-      FROM jantares WHERE lancado IS NULL OR lancado=0
-    `).get().s;
-    const saldoProjetado = saldoMovimentos + lucroProjetado;
-    const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
-    const baseSaldoParaResto = Math.min(saldoMovimentos, saldoProjetado);
-    const restoDisponivel = Math.max(0, baseSaldoParaResto - totalCasaCents - aplicadoResto);
+    const restoDisponivel = Math.max(0, saldoMovimentos - totalCasaCents);
 
     if (valor_cents > restoDisponivel + 5) {
       return res.redirect('/definicoes/rodizio?err=Valor+excede+o+resto+disponível');
