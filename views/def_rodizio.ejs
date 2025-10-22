@@ -1,123 +1,140 @@
-<%- include('partials/header', { title: 'Rodízio' }) %>
+<!-- views/def_rodizio.ejs -->
+<div class="toolbar">
+  <h1>Rodízio</h1>
+  <a class="btn btn-light" style="margin-left:auto" href="/definicoes">Voltar</a>
+</div>
 
-<h1>Rodízio</h1>
+<% if (err) { %>
+  <div class="alert alert-error"><%= err %></div>
+<% } %>
+<% if (msg) { %>
+  <div class="alert alert-success"><%= msg %></div>
+<% } %>
 
-<div class="cards" style="margin-bottom: 16px;">
+<!-- ================== Resumo ================== -->
+<div class="cards" style="margin-bottom:12px;">
   <div class="card stat">
     <div class="stat-label">Saldo movimentos</div>
-    <div class="stat-number">€ <%= euros(resumo.saldoMovimentos) %></div>
+    <div class="stat-number">€ <%= euros(resumo?.saldoMovimentos || 0) %></div>
     <div class="muted">receitas − despesas + peditórios + patrocínios</div>
   </div>
-
   <div class="card stat">
     <div class="stat-label">Lucro projetado (jantares pendentes)</div>
-    <div class="stat-number">€ <%= euros(resumo.lucroProjetado) %></div>
-    <div class="muted">apenas jantares ainda não lançados</div>
+    <div class="stat-number">€ <%= euros(resumo?.lucroProjetado || 0) %></div>
   </div>
-
   <div class="card stat">
     <div class="stat-label">Saldo projetado</div>
-    <div class="stat-number">€ <%= euros(resumo.saldoProjetado) %></div>
+    <div class="stat-number">€ <%= euros(resumo?.saldoProjetado || 0) %></div>
   </div>
-
   <div class="card stat">
     <div class="stat-label">Total em casais</div>
-    <div class="stat-number">€ <%= euros(resumo.totalCasaCents) %></div>
+    <div class="stat-number">€ <%= euros(resumo?.totalCasaCents || 0) %></div>
   </div>
-
   <div class="card stat">
     <div class="stat-label">Resto teórico</div>
-    <div class="stat-number">€ <%= euros(resumo.restoTeorico) %></div>
+    <div class="stat-number">€ <%= euros(resumo?.restoTeorico || 0) %></div>
+    <div class="muted">não aplicável ainda (inclui projetado)</div>
   </div>
-
   <div class="card stat">
-    <div class="stat-label">Aplicado do resto</div>
-    <div class="stat-number">€ <%= euros(resumo.aplicadoRestoCents) %></div>
+    <div class="stat-label">Já aplicado do resto</div>
+    <div class="stat-number">€ <%= euros(resumo?.aplicadoRestoCents || 0) %></div>
   </div>
-
   <div class="card stat">
     <div class="stat-label">Resto disponível</div>
-    <div class="stat-number" style="color:green;font-weight:bold;">€ <%= euros(resumo.restoDisponivel) %></div>
-    <div class="muted">apenas com base nos movimentos (sem projetado)</div>
+    <div class="stat-number">€ <%= euros(resumo?.restoDisponivel || 0) %></div>
+    <div class="muted">disponível para aplicar agora</div>
   </div>
 </div>
 
-<hr>
+<!-- ================== Definir bloco / início ================== -->
+<div class="card" style="margin-bottom:12px;">
+  <h3>Definições do rodízio</h3>
+  <form method="post" action="/definicoes/rodizio" class="form-grid">
+    <label>Valor por bloco (€)
+      <input type="number" step="0.01" min="0" name="bloco"
+             value="<%= (euros((settings?.rodizio_bloco_cents ?? 500000))) %>" />
+    </label>
 
-<h2>Aplicar parte do resto a um casal</h2>
+    <label>Primeiro casal na rotação
+      <select name="inicio_casal_id">
+        <option value="">(primeiro da lista)</option>
+        <% (casais||[]).forEach(c => { %>
+          <option value="<%= c.id %>" <%= (settings?.rodizio_inicio_casal_id && settings.rodizio_inicio_casal_id===c.id) ? 'selected' : '' %>>
+            <%= c.nome %>
+          </option>
+        <% }) %>
+      </select>
+    </label>
 
-<form action="/definicoes/rodizio/aplicar" method="post" style="margin-bottom: 24px;">
-  <label>Casal</label>
-  <select name="casal_id" required>
-    <option value="">(escolher casal)</option>
-    <% casais.forEach(c => { %>
-      <option value="<%= c.id %>"><%= c.nome %> (atual: € <%= euros(c.valor_casa_cents) %>)</option>
-    <% }) %>
-  </select>
+    <div style="align-self:end">
+      <button class="btn btn-primary">Guardar</button>
+    </div>
+  </form>
+</div>
 
-  <label>Valor (€)</label>
-  <input type="number" name="valor" step="0.01" min="0" required>
+<!-- ================== Aplicar resto disponível ================== -->
+<div class="card" style="margin-bottom:12px;">
+  <h3>Aplicar resto disponível</h3>
+  <p class="muted">
+    Resto disponível atual: <b>€ <%= euros(resumo?.restoDisponivel || 0) %></b>
+  </p>
 
-  <button type="submit" class="btn btn-success">Aplicar</button>
-  <div class="muted">Não pode exceder o <b>resto disponível</b></div>
-</form>
+  <form method="post" action="/definicoes/rodizio/aplicar" class="form-grid">
+    <label>Casal
+      <select name="casal_id" required>
+        <option value="">— escolher —</option>
+        <% (casais||[]).forEach(c => { %>
+          <option value="<%= c.id %>"><%= c.nome %></option>
+        <% }) %>
+      </select>
+    </label>
 
-<hr>
+    <label>Valor (€)
+      <input type="number" name="valor" step="0.01" min="0.01" required placeholder="0,00" />
+    </label>
 
-<h2>Parâmetros do rodízio</h2>
+    <div style="align-self:end">
+      <button class="btn btn-primary">Aplicar</button>
+    </div>
+  </form>
+</div>
 
-<form action="/definicoes/rodizio" method="post" style="margin-bottom: 24px;">
-  <label>Tamanho do bloco (€)</label>
-  <input type="number" name="bloco" step="0.01" value="<%= euros(settings.rodizio_bloco_cents || 500000) %>">
+<!-- ================== Histórico de aplicações ================== -->
+<div class="card">
+  <h3>Histórico de aplicações</h3>
 
-  <label>Começar em (casal)</label>
-  <select name="inicio_casal_id">
-    <option value="">(não definido)</option>
-    <% casais.forEach(c => { %>
-      <option value="<%= c.id %>" <%= settings.rodizio_inicio_casal_id == c.id ? 'selected' : '' %>>
-        <%= c.nome %>
-      </option>
-    <% }) %>
-  </select>
-
-  <button type="submit" class="btn btn-primary">Guardar</button>
-</form>
-
-<hr>
-
-<h2>Histórico de aplicações do resto</h2>
-
-<% if (historico.length === 0) { %>
-  <p class="muted">Nenhuma aplicação registada ainda.</p>
-<% } else { %>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Data</th>
-        <th>Casal</th>
-        <th>Valor (€)</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% historico.forEach(h => { %>
+  <% if (!(historico && historico.length)) { %>
+    <p class="muted">Ainda não existem aplicações registadas.</p>
+  <% } else { %>
+    <table class="table">
+      <thead>
         <tr>
-          <td><%= h.dt %></td>
-          <td><%= h.casal_nome %></td>
-          <td>€ <%= euros(h.valor_cents) %></td>
-          <td style="white-space:nowrap">
-            <form action="/definicoes/rodizio/edit/<%= h.id %>" method="post" style="display:inline">
-              <input type="number" step="0.01" name="valor" placeholder="novo valor (€)" style="width:90px;">
-              <button type="submit" class="btn btn-sm btn-warning">Editar</button>
-            </form>
-            <form action="/definicoes/rodizio/delete/<%= h.id %>" method="post" style="display:inline" onsubmit="return confirm('Apagar esta aplicação?');">
-              <button type="submit" class="btn btn-sm btn-danger">Apagar</button>
-            </form>
-          </td>
+          <th>Data</th>
+          <th>Casal</th>
+          <th>Valor</th>
+          <th style="width:220px">Ações</th>
         </tr>
-      <% }) %>
-    </tbody>
-  </table>
-<% } %>
-
-<%- include('partials/footer') %>
+      </thead>
+      <tbody>
+        <% historico.forEach(h => { %>
+          <tr>
+            <td><%= h.dt || '—' %></td>
+            <td><%= h.casal_nome || ('#'+h.casal_id) %></td>
+            <td>€ <%= euros(h.valor_cents) %></td>
+            <td>
+              <form method="post" action="/definicoes/rodizio/edit/<%= h.id %>" style="display:inline-flex; gap:6px; align-items:center;">
+                <input type="number" name="valor" step="0.01" min="0.01"
+                       value="<%= euros(h.valor_cents) %>" style="width:110px" />
+                <button class="btn btn-light" title="Guardar">Guardar</button>
+              </form>
+              <form method="post" action="/definicoes/rodizio/delete/<%= h.id %>"
+                    style="display:inline" onsubmit="return confirm('Apagar esta aplicação?')">
+                <button class="btn btn-danger">Apagar</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
