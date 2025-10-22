@@ -2,28 +2,11 @@
 import { Router } from 'express';
 import db, { euros, cents } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { loadRodizioResumo } from '../lib/rodizio.js';
 
 const router = Router();
 
 /* ================== helpers ================== */
-
-// soma segura (se a tabela não existir, devolve 0)
-function sumOr0(sql) {
-  try { return db.prepare(sql).get()?.s ?? 0; } catch { return 0; }
-}
-
-// saldo de movimentos (apenas o que já está “em caixa” nos movimentos)
-function saldoMovimentosCents() {
-  const recMov  = sumOr0(`SELECT COALESCE(SUM(m.valor_cents),0) AS s
-                          FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-                          WHERE c.type='receita'`);
-  const despMov = sumOr0(`SELECT COALESCE(SUM(m.valor_cents),0) AS s
-                          FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
-                          WHERE c.type='despesa'`);
-  const ped     = sumOr0(`SELECT COALESCE(SUM(valor_cents),0) AS s FROM peditorios`);
-  const patEnt  = sumOr0(`SELECT COALESCE(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`);
-  return recMov - despMov + ped + patEnt;
-}
 
 /* ================== CRUD Casais ================== */
 
@@ -82,10 +65,17 @@ router.post('/casais/:id/delete', requireAuth, (req, res, next) => {
 // ecrã do rodízio: mostra blocos completos, NOVOS blocos por aplicar e **RESTO DISPONÍVEL**
 router.get('/casais/rodizio', requireAuth, (req, res, next) => {
   try {
-    const st = db.prepare('SELECT * FROM settings WHERE id=1').get() || {};
-    const bloco      = Number(st.rodizio_bloco_cents ?? 500000); // €5.000 default
+    const {
+      settings: st,
+      casaisTarget: bloco,
+      saldoMovimentos: net,
+      aplicadoResto,
+      restoDisponivel,
+    } = loadRodizioResumo();
+
     const inicioId   = st.rodizio_inicio_casal_id ?? null;
     const aplicados  = Number(st.rodizio_blocks_aplicados ?? 0); // blocos já aplicados a casais
+    const blocoCents = bloco > 0 ? bloco : 0;
 
     const casais = db.prepare(`
       SELECT id, nome, COALESCE(valor_casa_cents,0) AS atual
@@ -93,14 +83,8 @@ router.get('/casais/rodizio', requireAuth, (req, res, next) => {
       ORDER BY id
     `).all();
 
-    // apenas valores já existentes nos movimentos/peditorios/patrocinios
-    const net = saldoMovimentosCents();
-
     // blocos que cabem nesse valor "net"
-    const blocosCompletos = bloco > 0 ? Math.floor(net / bloco) : 0;
-
-    // o que sobra após blocos completos => isto é o **resto disponível**
-    const restoDisponivel = bloco > 0 ? (net - blocosCompletos * bloco) : net;
+    const blocosCompletos = blocoCents > 0 ? Math.floor(net / blocoCents) : 0;
 
     // blocos ainda por aplicar (do total que cabem até hoje)
     const novosBlocos = Math.max(blocosCompletos - aplicados, 0);
@@ -115,12 +99,12 @@ router.get('/casais/rodizio', requireAuth, (req, res, next) => {
     const linhas = casais.map((c, idx) => ({
       ...c,
       novos_blocks: atribuicoes[idx],
-      alvo: c.atual + atribuicoes[idx] * bloco
+      alvo: c.atual + atribuicoes[idx] * blocoCents
     }));
 
     res.render('casais_rodizio', {
       linhas,
-      bloco,
+      bloco: blocoCents,
       blocosCompletos,
       novosBlocos,
       restoDisponivel,        // <-- só mostramos este “resto”
@@ -143,16 +127,19 @@ router.post('/casais/rodizio/inicio', requireAuth, (req, res, next) => {
 // aplicar e persistir os novos blocos
 router.post('/casais/rodizio/aplicar', requireAuth, (req, res, next) => {
   try {
-    const st = db.prepare('SELECT * FROM settings WHERE id=1').get() || {};
-    const bloco     = Number(st.rodizio_bloco_cents ?? 500000);
+    const {
+      settings: st,
+      casaisTarget: bloco,
+      saldoMovimentos: net,
+    } = loadRodizioResumo();
     const inicioId  = st.rodizio_inicio_casal_id ?? null;
     const aplicados = Number(st.rodizio_blocks_aplicados ?? 0);
 
     const casais = db.prepare(`SELECT id FROM casais ORDER BY id`).all();
     if (casais.length === 0) return res.redirect('/casais/rodizio');
 
-    const net = saldoMovimentosCents();
-    const blocosCompletos = bloco > 0 ? Math.floor(net / bloco) : 0;
+    const blocoCents = bloco > 0 ? bloco : 0;
+    const blocosCompletos = blocoCents > 0 ? Math.floor(net / blocoCents) : 0;
     const novosBlocos = Math.max(blocosCompletos - aplicados, 0);
     if (novosBlocos === 0) return res.redirect('/casais/rodizio');
 
@@ -167,7 +154,7 @@ router.post('/casais/rodizio/aplicar', requireAuth, (req, res, next) => {
         const blocks = atribuicoes[i];
         if (blocks > 0) {
           db.prepare(`UPDATE casais SET valor_casa_cents = valor_casa_cents + ? WHERE id=?`)
-            .run(blocks * bloco, casais[i].id);
+            .run(blocks * blocoCents, casais[i].id);
         }
       }
       db.prepare(`UPDATE settings SET rodizio_blocks_aplicados = rodizio_blocks_aplicados + ? WHERE id=1`)
