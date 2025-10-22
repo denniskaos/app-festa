@@ -86,6 +86,7 @@ router.get('/casais/rodizio', requireAuth, (req, res, next) => {
     const bloco      = Number(st.rodizio_bloco_cents ?? 500000); // €5.000 default
     const inicioId   = st.rodizio_inicio_casal_id ?? null;
     const aplicados  = Number(st.rodizio_blocks_aplicados ?? 0); // blocos já aplicados a casais
+    const aplicadoResto = sumOr0(`SELECT COALESCE(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`);
 
     const casais = db.prepare(`
       SELECT id, nome, COALESCE(valor_casa_cents,0) AS atual
@@ -95,12 +96,13 @@ router.get('/casais/rodizio', requireAuth, (req, res, next) => {
 
     // apenas valores já existentes nos movimentos/peditorios/patrocinios
     const net = saldoMovimentosCents();
+    const casaisTarget = bloco > 0 ? bloco : 0;
 
     // blocos que cabem nesse valor "net"
     const blocosCompletos = bloco > 0 ? Math.floor(net / bloco) : 0;
 
     // o que sobra após blocos completos => isto é o **resto disponível**
-    const restoDisponivel = bloco > 0 ? (net - blocosCompletos * bloco) : net;
+    const restoDisponivel = Math.max(0, net - (casaisTarget + aplicadoResto));
 
     // blocos ainda por aplicar (do total que cabem até hoje)
     const novosBlocos = Math.max(blocosCompletos - aplicados, 0);
