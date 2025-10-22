@@ -1,60 +1,123 @@
 // routes/definicoes.js
 import { Router } from 'express';
+import bcrypt from 'bcrypt';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 
 const router = Router();
 
-// helper
-function euros(cents){ return ((cents||0)/100).toFixed(2); }
+/* =======================================================
+   CAMPOS DA PÁGINA DE DEFINIÇÕES
+======================================================= */
+const KEYS = [
+  { key: 'line1', label: 'Linha 1 (nome)', type: 'text' },
+  { key: 'line2', label: 'Linha 2 (subtítulo)', type: 'text' },
+  { key: 'logo_path', label: 'Caminho do logótipo', type: 'text' },
+  { key: 'primary_color', label: 'Cor primária', type: 'color' },
+  { key: 'secondary_color', label: 'Cor secundária', type: 'color' },
+  { key: 'title', label: 'Título da página', type: 'text' },
+  { key: 'sub_title', label: 'Subtítulo da página', type: 'text' },
+];
 
-/* ===================== MIGRAÇÃO / RECONCILIAÇÃO ===================== */
-(function ensureRodizioTables(){
+/* =======================================================
+   MIGRAÇÃO RODÍZIO
+======================================================= */
+(function ensureRodizioTables() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS rodizio_aplicacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       dt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
       casal_id INTEGER NOT NULL REFERENCES casais(id) ON DELETE CASCADE,
-      valor_cents INTEGER NOT NULL CHECK(valor_cents>=0),
-      refletido INTEGER NOT NULL DEFAULT 0
+      valor_cents INTEGER NOT NULL CHECK(valor_cents>=0)
     );
   `);
-  // garantir a coluna refletido (para bases antigas)
-  try {
-    const cols = db.prepare(`PRAGMA table_info('rodizio_aplicacoes')`).all().map(c=>c.name);
-    if (!cols.includes('refletido')) {
-      db.exec(`ALTER TABLE rodizio_aplicacoes ADD COLUMN refletido INTEGER NOT NULL DEFAULT 0`);
-    }
-  } catch {}
-
-  // reconciliar aplicações antigas: somar ao casal e marcar refletido=1
-  const pendentes = db.prepare(`
-    SELECT id, casal_id, valor_cents
-    FROM rodizio_aplicacoes
-    WHERE refletido=0
-  `).all();
-
-  if (pendentes.length) {
-    const tx = db.transaction(() => {
-      for (const a of pendentes) {
-        db.prepare(`UPDATE casais SET valor_casa_cents = COALESCE(valor_casa_cents,0) + ? WHERE id=?`)
-          .run(a.valor_cents, a.casal_id);
-        db.prepare(`UPDATE rodizio_aplicacoes SET refletido=1 WHERE id=?`).run(a.id);
-      }
-    });
-    tx();
-  }
 })();
 
-/* ===================== RODÍZIO ===================== */
+/* =======================================================
+   DEFINIÇÕES GERAIS (BRANDING + PERFIL)
+======================================================= */
+
+// garante linha base
+function ensureSettingsRow() {
+  let row = db.prepare('SELECT * FROM settings WHERE id=1').get();
+  if (!row) {
+    db.prepare(`
+      INSERT INTO settings (id,line1,line2,primary_color,secondary_color)
+      VALUES (1,?,?,?,?)
+    `).run(
+      'Comissão de Festas',
+      'em Honra de Nossa Senhora da Graça 2026 - Vila Caiz',
+      '#1f6feb',
+      '#b58900'
+    );
+    row = db.prepare('SELECT * FROM settings WHERE id=1').get();
+  }
+  return row;
+}
+
+// GET /definicoes
+router.get('/definicoes', requireAuth, (req, res) => {
+  const row = ensureSettingsRow();
+  const me = db.prepare('SELECT id,name,email,role FROM users WHERE id=?').get(req.session.user.id);
+  res.render('definicoes', {
+    title: 'Definições',
+    user: req.session.user,
+    KEYS,
+    map: row,
+    me,
+    msg: req.query.msg || null,
+    err: req.query.err || null,
+  });
+});
+
+// POST /definicoes (branding)
+router.post('/definicoes', requireAuth, (req, res) => {
+  const fields = KEYS.map(k => k.key);
+  const setSql = fields.map(k => `${k}=?`).join(', ');
+  const values = fields.map(k => req.body[k] ?? null);
+  db.prepare(`UPDATE settings SET ${setSql} WHERE id=1`).run(...values);
+  res.redirect('/definicoes?msg=Definições+guardadas');
+});
+
+// POST /definicoes/perfil
+router.post('/definicoes/perfil', requireAuth, (req, res) => {
+  const { name, email, current_password, new_password, confirm_password } = req.body;
+  db.prepare('UPDATE users SET name=?, email=? WHERE id=?').run(
+    (name || '').trim(),
+    (email || '').trim(),
+    req.session.user.id
+  );
+
+  if (new_password || confirm_password || current_password) {
+    const me = db.prepare('SELECT password_hash FROM users WHERE id=?').get(req.session.user.id);
+    if (!bcrypt.compareSync(current_password || '', me.password_hash))
+      return res.redirect('/definicoes?err=Password+atual+incorreta');
+    if (!new_password || new_password !== confirm_password)
+      return res.redirect('/definicoes?err=Password+nova+não+confere');
+
+    const hash = bcrypt.hashSync(new_password, 10);
+    db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.session.user.id);
+  }
+
+  const updated = db.prepare('SELECT id,name,email,role FROM users WHERE id=?').get(req.session.user.id);
+  req.session.user = updated;
+  res.redirect('/definicoes?msg=Perfil+atualizado');
+});
+
+/* =======================================================
+   RODÍZIO
+======================================================= */
+
+function euros(cents) {
+  return ((cents || 0) / 100).toFixed(2);
+}
+
+// GET /definicoes/rodizio
 router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
-    const settings = db.prepare(`SELECT * FROM settings WHERE id=1`).get() || {};
+    const settings = ensureSettingsRow();
 
-    // Totais “em casais” (já inclui aplicações refletidas)
     const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
-
-    // Movimentos reais
     const recMov = db.prepare(`
       SELECT IFNULL(SUM(m.valor_cents),0) AS s
       FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
@@ -68,28 +131,21 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
     const ped = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM peditorios`).get().s;
     const pat = db.prepare(`SELECT IFNULL(SUM(valor_entregue_cents),0) AS s FROM patrocinadores`).get().s;
 
-    // Jantares pendentes (não lançados em movimentos)
     const lucroProjetado = db.prepare(`
       SELECT IFNULL(SUM((pessoas*valor_pessoa_cents)-despesas_cents),0) AS s
-      FROM jantares
-      WHERE lancado IS NULL OR lancado=0
+      FROM jantares WHERE lancado IS NULL OR lancado=0
     `).get().s;
 
-    // Saldo “real” dos movimentos
     const saldoMovimentos = recMov - despMov + ped + pat;
+    const saldoProjetado = saldoMovimentos + lucroProjetado;
 
-    // Saldo projetado = igual ao real quando não há pendentes (apenas informativo)
-    const saldoProjetado = (lucroProjetado > 0) ? (saldoMovimentos + lucroProjetado) : saldoMovimentos;
-
-    // Resto teórico (com base no real; o projetado é apenas informativo)
+    const restoTeorico = Math.max(0, saldoProjetado - totalCasaCents);
     const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
-    const restoTeorico   = Math.max(0, saldoMovimentos - totalCasaCents);
     const restoDisponivel = Math.max(0, saldoMovimentos - totalCasaCents - aplicadoResto);
 
-    const casais = db.prepare(`SELECT id, nome FROM casais ORDER BY nome COLLATE NOCASE`).all();
-
+    const casais = db.prepare(`SELECT id,nome FROM casais ORDER BY nome COLLATE NOCASE`).all();
     const historico = db.prepare(`
-      SELECT a.id, a.dt, a.valor_cents, a.refletido, c.nome AS casal_nome, a.casal_id
+      SELECT a.id, a.dt, a.valor_cents, c.nome AS casal_nome
       FROM rodizio_aplicacoes a
       JOIN casais c ON c.id=a.casal_id
       ORDER BY a.id DESC
@@ -108,39 +164,42 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
         totalCasaCents,
         restoTeorico,
         aplicadoResto,
-        restoDisponivel
+        restoDisponivel,
       },
       msg: req.query.msg || null,
-      err: req.query.err || null
+      err: req.query.err || null,
     });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
-/* Guardar parâmetros do rodízio (bloco + 1º casal) */
+// POST /definicoes/rodizio (guardar config)
 router.post('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
-    const blocoCents = Math.round(parseFloat(String(req.body.bloco||'0').replace(',', '.')) * 100) || 0;
-    const inicioId = req.body.inicio_casal_id ? Number(req.body.inicio_casal_id) : null;
+    const blocoCents = Math.round(parseFloat(req.body.bloco.replace(',', '.')) * 100) || 0;
+    const inicioId = Number(req.body.inicio_casal_id) || null;
     db.prepare(`
       UPDATE settings
       SET rodizio_bloco_cents=?, rodizio_inicio_casal_id=?
       WHERE id=1
     `).run(blocoCents, inicioId);
     res.redirect('/definicoes/rodizio?msg=Definições+atualizadas');
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
-/* Aplicar parte do resto a um casal (👍 atualiza o casal) */
+// POST /definicoes/rodizio/aplicar
 router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
   try {
-    const casal_id = Number(req.body.casal_id || 0);
-    const valor = parseFloat(String(req.body.valor||'').replace(',', '.')) || 0;
+    const casal_id = Number(req.body.casal_id);
+    const valor = parseFloat(req.body.valor.replace(',', '.')) || 0;
     const valor_cents = Math.round(valor * 100);
 
-    if (!casal_id)   return res.redirect('/definicoes/rodizio?err=Escolhe+um+casal');
+    if (!casal_id) return res.redirect('/definicoes/rodizio?err=Escolhe+um+casal');
     if (valor_cents <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
 
-    // Recalcular disponível (base real, sem projetado)
     const totalCasaCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
     const recMov = db.prepare(`
       SELECT IFNULL(SUM(m.valor_cents),0) AS s
@@ -158,67 +217,39 @@ router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
     const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
     const restoDisponivel = Math.max(0, saldoMovimentos - totalCasaCents - aplicadoResto);
 
-    // tolerância 5 cêntimos
     if (valor_cents > restoDisponivel + 5) {
       return res.redirect('/definicoes/rodizio?err=Valor+excede+o+resto+disponível');
     }
 
-    const tx = db.transaction(() => {
-      db.prepare(`INSERT INTO rodizio_aplicacoes (casal_id, valor_cents, refletido)
-                  VALUES (?,?,1)`).run(casal_id, valor_cents);
-      db.prepare(`UPDATE casais SET valor_casa_cents = COALESCE(valor_casa_cents,0) + ? WHERE id=?`)
-        .run(valor_cents, casal_id);
-    });
-    tx();
-
+    db.prepare(`INSERT INTO rodizio_aplicacoes (casal_id, valor_cents) VALUES (?,?)`).run(casal_id, valor_cents);
     res.redirect('/definicoes/rodizio?msg=Aplicação+registada');
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
-/* Editar aplicação (👍 ajusta o casal pelo delta) */
+// POST /definicoes/rodizio/edit/:id
 router.post('/definicoes/rodizio/edit/:id', requireAuth, (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const novo = Math.round((parseFloat(String(req.body.valor||'').replace(',', '.')) || 0) * 100);
-    if (!id || novo <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
-
-    const row = db.prepare(`SELECT id, casal_id, valor_cents, refletido FROM rodizio_aplicacoes WHERE id=?`).get(id);
-    if (!row) return res.redirect('/definicoes/rodizio?err=Registo+inexistente');
-
-    const delta = novo - row.valor_cents;
-
-    const tx = db.transaction(() => {
-      db.prepare(`UPDATE rodizio_aplicacoes SET valor_cents=?, refletido=1 WHERE id=?`).run(novo, id);
-      // ajustar casal apenas se já estava refletido (todas as novas estão)
-      if (delta !== 0) {
-        db.prepare(`UPDATE casais SET valor_casa_cents = COALESCE(valor_casa_cents,0) + ? WHERE id=?`)
-          .run(delta, row.casal_id);
-      }
-    });
-    tx();
-
+    const valor = parseFloat(req.body.valor.replace(',', '.')) || 0;
+    const valor_cents = Math.round(valor * 100);
+    if (!id || valor_cents <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
+    db.prepare(`UPDATE rodizio_aplicacoes SET valor_cents=? WHERE id=?`).run(valor_cents, id);
     res.redirect('/definicoes/rodizio?msg=Valor+atualizado');
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
-/* Apagar aplicação (👍 reverte no casal) */
+// POST /definicoes/rodizio/delete/:id
 router.post('/definicoes/rodizio/delete/:id', requireAuth, (req, res, next) => {
   try {
-    const id = Number(req.params.id);
-    const row = db.prepare(`SELECT id, casal_id, valor_cents, refletido FROM rodizio_aplicacoes WHERE id=?`).get(id);
-    if (!row) return res.redirect('/definicoes/rodizio?err=Registo+inexistente');
-
-    const tx = db.transaction(() => {
-      if (row.refletido) {
-        db.prepare(`UPDATE casais SET valor_casa_cents = COALESCE(valor_casa_cents,0) - ? WHERE id=?`)
-          .run(row.valor_cents, row.casal_id);
-      }
-      db.prepare(`DELETE FROM rodizio_aplicacoes WHERE id=?`).run(id);
-    });
-    tx();
-
+    db.prepare(`DELETE FROM rodizio_aplicacoes WHERE id=?`).run(req.params.id);
     res.redirect('/definicoes/rodizio?msg=Aplicação+apagada');
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
 export default router;
