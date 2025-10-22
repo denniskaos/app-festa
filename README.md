@@ -1,5 +1,5 @@
 
-# Festa da Aldeia — Orçamento (sem Produtos/Stock/Vendas)
+# Nossa Senhora da Graça 2026 — Orçamento (sem Produtos/Stock/Vendas)
 
 Inclui: Login, Painel, Cronograma, Importação CSV, **Orçamento** (linhas), Movimentos, Patrocinadores, Backup/Export.
 
