@@ -123,6 +123,7 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
   try {
     const settings = ensureSettingsRow();
 
+    const totalCasaRealCents = db.prepare(`SELECT IFNULL(SUM(valor_casa_cents),0) AS s FROM casais`).get().s;
     const recMov = db.prepare(`
       SELECT IFNULL(SUM(m.valor_cents),0) AS s
       FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
@@ -142,7 +143,6 @@ router.get('/definicoes/rodizio', requireAuth, (req, res, next) => {
     `).get().s;
 
     const saldoMovimentos = recMov - despMov + ped + pat;
-    const totalCasaCents = casaisTargetCents(settings);
     const saldoProjetado = Math.max(0, lucroProjetado);
 
     const aplicadoResto = db.prepare(`SELECT IFNULL(SUM(valor_cents),0) AS s FROM rodizio_aplicacoes`).get().s;
@@ -209,7 +209,7 @@ router.post('/definicoes/rodizio/aplicar', requireAuth, (req, res, next) => {
     if (valor_cents <= 0) return res.redirect('/definicoes/rodizio?err=Valor+inválido');
 
     const settings = ensureSettingsRow();
-    const totalCasaCents = casaisTargetCents(settings);
+    const totalCasaCents = Number(settings.rodizio_bloco_cents ?? 500000);
     const recMov = db.prepare(`
       SELECT IFNULL(SUM(m.valor_cents),0) AS s
       FROM movimentos m JOIN categorias c ON c.id=m.categoria_id
