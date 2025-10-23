@@ -1,24 +1,23 @@
 <!-- views/jantares_org.ejs -->
 <div class="toolbar">
-  <h1>Organizar — <%= j.title || j.dt || ('Jantar #' + j.id) %></h1>
+  <h1>
+    Organizar — <%= (j.title && j.title.trim()) ? j.title : (j.dt || ('Jantar #' + j.id)) %>
+  </h1>
+
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn" href="<%= urls.mesas %>">Mesas</a>
     <a class="btn" href="<%= urls.convidados %>">Convidados</a>
     <a class="btn" href="<%= urls.despesas %>">Despesas</a>
-    <a class="btn btn-light" href="<%= urls.print %>">Imprimir</a>
+    <a class="btn btn-light" href="<%= urls.print %>" target="_blank" rel="noopener">Imprimir</a>
 
-    <!-- Lançar / Reabrir -->
     <% if (j.lancado) { %>
-      <form method="post" action="<%= urls.lancar %>" onsubmit="return confirm('Lançar novamente? (irá criar movimentos em falta se existirem)')">
-        <button class="btn btn-primary" disabled aria-disabled="true">Já lançado</button>
-      </form>
       <form method="post" action="<%= urls.reabrir %>"
-            onsubmit="return confirm('Reabrir lançamento? O botão de lançar ficará ativo novamente.')">
+            onsubmit="return confirm('Reabrir este lançamento? Isto apaga os movimentos lançados para este jantar.')">
         <button class="btn btn-warning">Reabrir lançamento</button>
       </form>
     <% } else { %>
       <form method="post" action="<%= urls.lancar %>"
-            onsubmit="return confirm('Lançar para Movimentos?')">
+            onsubmit="return confirm('Lançar este jantar para Movimentos?')">
         <button class="btn btn-primary">Lançar para Movimentos</button>
       </form>
     <% } %>
@@ -66,3 +65,4 @@
     </tbody>
   </table>
 </div>
+
