@@ -65,6 +65,7 @@ function navUrls(jantar_id) {
     convidados: `/jantares/${jantar_id}/convidados`,
     despesas: `/jantares/${jantar_id}/despesas`,
     lancar: `/jantares/${jantar_id}/lancar`,
+    reabrir: `/jantares/${jantar_id}/reabrir`,
     print: `/jantares/${jantar_id}/mesas/print`,
   };
 }
@@ -433,6 +434,29 @@ router.get('/jantares/:id/lancar', requireAuth, handleLancar);
 // Aliases (compat): /despesas/lancar
 router.post('/jantares/:id/despesas/lancar', requireAuth, handleLancar);
 router.get('/jantares/:id/despesas/lancar', requireAuth, handleLancar);
+
+router.post('/jantares/:id/reabrir', requireAuth, (req, res, next) => {
+  try {
+    const j = getJantarOr404(req.params.id);
+    const prefix = `${etiquetaJantar(j)} — `;
+    const catReceitaId = ensureCategoriaMulti(['Jantares'], 'receita');
+    const catDespesaId = ensureCategoriaMulti(['Jantares — Despesas', 'Jantares — Despesa'], 'despesa');
+
+    db.prepare(`
+      DELETE FROM movimentos
+      WHERE categoria_id=? AND descr LIKE ?
+    `).run(catReceitaId, `${prefix}%`);
+
+    db.prepare(`
+      DELETE FROM movimentos
+      WHERE categoria_id=? AND descr LIKE ?
+    `).run(catDespesaId, `${prefix}%`);
+
+    db.prepare(`UPDATE jantares SET lancado=0 WHERE id=?`).run(j.id);
+
+    res.redirect(`/jantares/${j.id}/organizar`);
+  } catch (e) { next(e); }
+});
 
 /* =========================================================
    IMPRIMIR MESAS
