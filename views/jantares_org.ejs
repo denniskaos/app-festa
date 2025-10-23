@@ -1,23 +1,27 @@
 <!-- views/jantares_org.ejs -->
 <div class="toolbar">
-  <a class="btn btn-secondary"
-     href="/jantares"
-     onclick="if(document.referrer && new URL(document.referrer).origin===location.origin){history.back();return false;}"
-     aria-label="Voltar">Voltar</a>
-
-  <h1>Organizar — <%= (j.title && j.title.trim()) || j.dt || ('Jantar #' + j.id) %></h1>
-
+  <h1>Organizar — <%= j.title || j.dt || ('Jantar #' + j.id) %></h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn" href="<%= urls.mesas %>">Mesas</a>
     <a class="btn" href="<%= urls.convidados %>">Convidados</a>
     <a class="btn" href="<%= urls.despesas %>">Despesas</a>
     <a class="btn btn-light" href="<%= urls.print %>">Imprimir</a>
-    <form method="post" action="/jantares/<%= j.id %>/lancar" style="display:inline"
-          onsubmit="return confirm('Lançar para Movimentos?')">
-      <button class="btn btn-primary" <%= j.lancado ? 'disabled aria-disabled="true"' : '' %>>
-        <%= j.lancado ? 'Já lançado' : 'Lançar para Movimentos' %>
-      </button>
-    </form>
+
+    <!-- Lançar / Reabrir -->
+    <% if (j.lancado) { %>
+      <form method="post" action="<%= urls.lancar %>" onsubmit="return confirm('Lançar novamente? (irá criar movimentos em falta se existirem)')">
+        <button class="btn btn-primary" disabled aria-disabled="true">Já lançado</button>
+      </form>
+      <form method="post" action="<%= urls.reabrir %>"
+            onsubmit="return confirm('Reabrir lançamento? O botão de lançar ficará ativo novamente.')">
+        <button class="btn btn-warning">Reabrir lançamento</button>
+      </form>
+    <% } else { %>
+      <form method="post" action="<%= urls.lancar %>"
+            onsubmit="return confirm('Lançar para Movimentos?')">
+        <button class="btn btn-primary">Lançar para Movimentos</button>
+      </form>
+    <% } %>
   </div>
 </div>
 
