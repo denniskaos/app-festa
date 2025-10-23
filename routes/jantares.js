@@ -32,33 +32,21 @@ function getJantarOr404(id) {
   return j;
 }
 
-const HAS_PRECO_COL = (() => {
-  try {
-    const cols = db.prepare(`PRAGMA table_info('jantares_convidados')`).all().map(c => c.name);
-    return cols.includes('preco_cents');
-  } catch {
-    return false;
-  }
-})();
-
 function receitaPorJantarCents(j) {
   const base = j.valor_pessoa_cents || 0;
 
-  if (HAS_PRECO_COL) {
-    const agg = db.prepare(`
-      SELECT COUNT(*) AS n,
-             COALESCE(SUM(COALESCE(preco_cents, ?)), 0) AS s
+  const agg = db.prepare(`
+    SELECT COUNT(*) AS total_convidados,
+           SUM(pago_cents) AS total_pago
       FROM jantares_convidados
-      WHERE jantar_id=?
-    `).get(base, j.id);
-    if (!agg || !agg.n) return (j.pessoas || 0) * base;
-    return agg.s || 0;
+     WHERE jantar_id=?
+  `).get(j.id);
+
+  if (!agg || !agg.total_convidados) {
+    return (j.pessoas || 0) * base;
   }
 
-  const row = db.prepare(`SELECT COUNT(*) AS n FROM jantares_convidados WHERE jantar_id=?`).get(j.id);
-  const convidados = row?.n || 0;
-  if (convidados > 0) return convidados * base;
-  return (j.pessoas || 0) * base;
+  return agg.total_pago || 0;
 }
 
 function normalizarTexto(v) {
