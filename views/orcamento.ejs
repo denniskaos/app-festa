@@ -1,33 +1,22 @@
 <div class="toolbar">
   <h1>Orçamento</h1>
+  <a class="btn" style="margin-left:auto" href="/orcamento/new">Novo</a>
 </div>
 
-<!-- Estatística única: valor total do orçamento (soma das linhas) -->
 <div class="cards" style="margin-bottom:12px;">
   <div class="card stat">
     <div class="stat-label">Total do Orçamento</div>
     <div class="stat-number">€ <%= (total/100).toFixed(2) %></div>
   </div>
+  <div class="card stat">
+    <div class="stat-label">Saldo Final</div>
+    <div class="stat-number">€ <%= (saldoFinal/100).toFixed(2) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Valor em falta</div>
+    <div class="stat-number">€ <%= (valorEmFalta/100).toFixed(2) %></div>
+  </div>
 </div>
-
-<section class="card">
-  <h3>Novo serviço</h3>
-  <form method="post" action="/orcamento" class="form-grid">
-    <label>Data
-      <input type="date" name="dt" />
-    </label>
-    <label>Descrição
-      <input type="text" name="descr" required />
-    </label>
-    <label>Valor (€)
-      <input type="number" step="0.01" name="valor" required />
-    </label>
-    <label style="grid-column:1/-1">Notas
-      <input type="text" name="notas" />
-    </label>
-    <button class="btn">Adicionar</button>
-  </form>
-</section>
 
 <div class="card">
   <h2>Lista</h2>
@@ -47,17 +36,13 @@
     <% } %>
     <% (linhas || []).forEach(r => { %>
       <tr>
-        <!-- Inputs ligados ao form da linha com form="edit-ID" (HTML válido) -->
-        <td><input form="edit-<%= r.id %>" type="date" name="dt" value="<%= r.dt || '' %>" /></td>
-        <td><input form="edit-<%= r.id %>" type="text" name="descr" value="<%= r.descr %>" required /></td>
-        <td><input form="edit-<%= r.id %>" type="number" step="0.01" name="valor" value="<%= (r.valor_cents/100).toFixed(2) %>" required /></td>
-        <td><input form="edit-<%= r.id %>" type="text" name="notas" value="<%= r.notas || '' %>" /></td>
+        <td><%= r.dt || '—' %></td>
+        <td><%= r.descr %></td>
+        <td>€ <%= (r.valor_cents/100).toFixed(2) %></td>
+        <td><%= r.notas || '—' %></td>
         <td class="actions">
-          <!-- Form de edição desta linha -->
-          <form id="edit-<%= r.id %>" method="post" action="/orcamento/<%= r.id %>"></form>
-          <button form="edit-<%= r.id %>" class="btn btn-light">Guardar</button>
+          <a class="btn btn-light" href="/orcamento/<%= r.id %>/edit">Editar</a>
 
-          <!-- Apagar -->
           <form method="post" action="/orcamento/<%= r.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar este serviço?')">
             <button class="btn btn-danger">Apagar</button>
           </form>
