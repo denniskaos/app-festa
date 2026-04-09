@@ -1,96 +1,234 @@
 <!-- views/backup.ejs -->
-<div class="toolbar">
-  <h1><%= typeof title !== 'undefined' ? title : 'Backup' %></h1>
-  <a class="btn btn-light" href="/dashboard" style="margin-left:auto">Voltar</a>
-</div>
+<%
+  const totalTabelas = (tables || []).length;
+  const totalRegistos = (tables || []).reduce((acc, t) => acc + Number((counts && counts[t.name]) || 0), 0);
+  const csvMap = {
+    movimentos: '/backup/export/movimentos.csv',
+    jantares: '/backup/export/jantares.csv',
+    orcamento_servicos: '/backup/export/orcamento.csv',
+    patrocinadores: '/backup/export/patrocinadores.csv',
+    peditorios: '/backup/export/peditorios.csv',
+    casais: '/backup/export/casais.csv',
+  };
+%>
 
-<div class="cards" style="margin-bottom:12px;">
-  <div class="card stat">
-    <div class="stat-label">Base de dados</div>
-    <div class="stat-number" style="font-size:14px; line-height:1.2; word-break:break-all;">
-      <%= dbPath || '(caminho indisponível)' %>
+<section class="backup-shell">
+  <div class="backup-top card">
+    <div class="backup-title-wrap">
+      <h1>Backup</h1>
+      <p class="muted">Centro de exportação, cópia e validação da base de dados.</p>
+    </div>
+    <div class="backup-top-actions">
+      <a class="btn btn-light" href="/dashboard">Voltar</a>
     </div>
   </div>
-</div>
 
-<div class="card" style="margin-bottom:12px;">
-  <h3 style="margin-top:0">Exportar / Download rápido</h3>
-  <div class="actions-row" style="display:flex; flex-wrap:wrap; gap:8px;">
-    <a class="btn btn-primary" href="/backup/download" title="Download direto do ficheiro .db">Descarregar DB</a>
-    <a class="btn" href="/backup/export.json">Exportar JSON</a>
-    <a class="btn" href="/backup/export.sql">Exportar SQL</a>
-    <a class="btn" href="/backup/export.xlsx">Exportar XLSX</a>
-    <a class="btn btn-light" href="/backup/export/all-csv.zip">ZIP: todos os CSVs</a>
+  <div class="backup-kpis">
+    <article class="card kpi kpi-db">
+      <div class="kpi-label">Base de dados</div>
+      <div class="kpi-value kpi-path"><%= dbPath || '(caminho indisponível)' %></div>
+    </article>
+    <article class="card kpi kpi-tables">
+      <div class="kpi-label">Tabelas</div>
+      <div class="kpi-value"><%= totalTabelas %></div>
+    </article>
+    <article class="card kpi kpi-records">
+      <div class="kpi-label">Registos</div>
+      <div class="kpi-value"><%= totalRegistos %></div>
+    </article>
   </div>
-</div>
 
-<div class="card" style="margin-bottom:12px;">
-  <h3 style="margin-top:0">CSV rápidos</h3>
-  <div class="actions-row" style="display:flex; flex-wrap:wrap; gap:8px;">
-    <a class="btn btn-light" href="/backup/export/movimentos.csv">Movimentos CSV</a>
-    <a class="btn btn-light" href="/backup/export/jantares.csv">Jantares CSV</a>
-    <a class="btn btn-light" href="/backup/export/orcamento.csv">Orçamento CSV</a>
-    <a class="btn btn-light" href="/backup/export/patrocinadores.csv">Patrocinadores CSV</a>
-    <a class="btn btn-light" href="/backup/export/peditorios.csv">Peditórios CSV</a>
-    <a class="btn btn-light" href="/backup/export/casais.csv">Casais CSV</a>
+  <div class="backup-grid">
+    <section class="card backup-panel">
+      <header>
+        <h3>Exportação completa</h3>
+        <p class="muted">Ideal para cópia de segurança total e arquivo.</p>
+      </header>
+      <div class="btn-grid">
+        <a class="btn btn-primary" href="/backup/download">Descarregar DB</a>
+        <a class="btn btn-primary" href="/backup/export.xlsx">Exportar XLSX</a>
+        <a class="btn" href="/backup/export/all-csv.zip">ZIP com todos os CSVs</a>
+        <a class="btn btn-light" href="/backup/export.json">Exportar JSON</a>
+        <a class="btn btn-light" href="/backup/export.sql">Exportar SQL</a>
+      </div>
+    </section>
+
+    <section class="card backup-panel">
+      <header>
+        <h3>CSV por área</h3>
+        <p class="muted">Exportação rápida por módulo da aplicação.</p>
+      </header>
+      <div class="btn-grid">
+        <a class="btn btn-light" href="/backup/export/movimentos.csv">Movimentos</a>
+        <a class="btn btn-light" href="/backup/export/jantares.csv">Jantares</a>
+        <a class="btn btn-light" href="/backup/export/orcamento.csv">Orçamento</a>
+        <a class="btn btn-light" href="/backup/export/patrocinadores.csv">Patrocinadores</a>
+        <a class="btn btn-light" href="/backup/export/peditorios.csv">Peditórios</a>
+        <a class="btn btn-light" href="/backup/export/casais.csv">Casais</a>
+      </div>
+    </section>
   </div>
-</div>
 
-<div class="card">
-  <h3 style="margin-top:0">Tabelas na base de dados</h3>
+  <section class="card backup-panel">
+    <header>
+      <h3>Tabelas na base de dados</h3>
+      <p class="muted">Consulta rápida de estrutura e exportação disponível por tabela.</p>
+    </header>
 
-  <% 
-    // mapeia nomes para CSVs rápidos (quando existirem rotas dedicadas)
-    const csvMap = {
-      movimentos: '/backup/export/movimentos.csv',
-      jantares: '/backup/export/jantares.csv',
-      orcamento_servicos: '/backup/export/orcamento.csv',
-      patrocinadores: '/backup/export/patrocinadores.csv',
-      peditorios: '/backup/export/peditorios.csv',
-      casais: '/backup/export/casais.csv',
-    };
-  %>
+    <div class="table-wrap">
+      <table class="table backup-table">
+        <thead>
+          <tr>
+            <th style="width:220px">Tabela</th>
+            <th style="width:110px">Registos</th>
+            <th>Estrutura</th>
+            <th style="width:170px">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!tables || !tables.length) { %>
+            <tr><td colspan="4" class="muted">Sem tabelas encontradas.</td></tr>
+          <% } %>
 
-  <table class="table">
-    <thead>
-      <tr>
-        <th style="width:220px">Tabela</th>
-        <th>Registos</th>
-        <th>DDL</th>
-        <th style="width:160px">Ação</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% if (!tables || !tables.length) { %>
-        <tr><td colspan="4" class="muted">Sem tabelas encontradas.</td></tr>
-      <% } %>
-      <% (tables || []).forEach(t => { %>
-        <tr>
-          <td><code><%= t.name %></code></td>
-          <td><%= (counts && typeof counts[t.name] !== 'undefined') ? counts[t.name] : '—' %></td>
-          <td>
-            <details>
-              <summary>Ver SQL</summary>
-              <pre style="white-space:pre-wrap; margin:6px 0;"><%= t.sql || '(sem DDL disponível)' %></pre>
-            </details>
-          </td>
-          <td>
-            <% if (csvMap[t.name]) { %>
-              <a class="btn btn-light" href="<%= csvMap[t.name] %>">Exportar CSV</a>
-            <% } else { %>
-              <span class="muted">Sem CSV direto</span>
-            <% } %>
-          </td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
-</div>
+          <% (tables || []).forEach(t => { %>
+            <tr>
+              <td><code><%= t.name %></code></td>
+              <td><span class="reg-chip"><%= (counts && typeof counts[t.name] !== 'undefined') ? counts[t.name] : '—' %></span></td>
+              <td>
+                <details>
+                  <summary>Ver estrutura SQL</summary>
+                  <pre><%= t.sql || '(sem DDL disponível)' %></pre>
+                </details>
+              </td>
+              <td>
+                <% if (csvMap[t.name]) { %>
+                  <a class="btn btn-light" href="<%= csvMap[t.name] %>">Exportar CSV</a>
+                <% } else { %>
+                  <span class="status-muted">Sem CSV direto</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
 
 <style>
-  /* pequeno ajuste para mobile */
-  @media (max-width: 640px) {
-    .actions-row .btn { flex: 1 1 auto; }
-    table.table code { word-break: break-all; }
+  .backup-shell {
+    display: grid;
+    gap: 14px;
+  }
+
+  .backup-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .backup-top h1 {
+    margin: 0;
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  .backup-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .kpi {
+    border-top: 3px solid transparent;
+    min-height: 92px;
+  }
+  .kpi-db { border-top-color: #2563eb; }
+  .kpi-tables { border-top-color: #16a34a; }
+  .kpi-records { border-top-color: #d97706; }
+  .kpi-label {
+    color: #6b7280;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .kpi-path {
+    font-size: 14px;
+    word-break: break-all;
+    font-weight: 600;
+  }
+
+  .backup-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .backup-panel header h3 {
+    margin: 0 0 2px;
+  }
+  .backup-panel header p {
+    margin: 0 0 10px;
+  }
+
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 8px;
+  }
+  .btn-grid .btn {
+    text-align: center;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-weight: 600;
+  }
+
+  .backup-table tbody tr:nth-child(odd) {
+    background: rgba(15, 23, 42, 0.02);
+  }
+  .backup-table details summary {
+    cursor: pointer;
+  }
+  .backup-table pre {
+    white-space: pre-wrap;
+    margin: 6px 0;
+    max-height: 180px;
+    overflow: auto;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .reg-chip {
+    display: inline-block;
+    min-width: 42px;
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #3730a3;
+    font-weight: 700;
+  }
+  .status-muted {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  @media (max-width: 1000px) {
+    .backup-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px) {
+    .backup-top { flex-direction: column; }
+    .backup-kpis { grid-template-columns: 1fr; }
+    .btn-grid { grid-template-columns: 1fr; }
+    .backup-top-actions { width: 100%; }
+    .backup-top-actions .btn { width: 100%; text-align: center; }
   }
 </style>
