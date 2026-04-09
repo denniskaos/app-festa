@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.4]
+### Added
+- Rodízio movido de **Definições** para a secção **Casais**, com ecrã completo em `/casais/rodizio`.
+- Rodapé global com indicação da release em todas as páginas: `Release v1.4.4`.
+
+### Changed
+- Página **Casais** atualizada para layout alinhado com o dashboard de Rodízio.
+- `definicoes/rodizio` passou a redirecionar para `casais/rodizio`.
+- Ajustes visuais no Backup e melhorias de exportação (encoding e cabeçalhos legíveis).
+
 ## [1.4.3]
 ### Added
 - Orçamento: nova página de criação de serviço (`/orcamento/new`) com botão **Novo** na listagem.
