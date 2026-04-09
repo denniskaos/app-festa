@@ -8,18 +8,34 @@ const router = Router();
 // LISTAR
 router.get('/peditorios', requireAuth, (req, res) => {
   const rows = db.prepare(`
-    SELECT id, dt, local, equipa, valor_cents, notas
+    SELECT
+      id, dt, local, equipa,
+      COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
+      COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
+      notas
     FROM peditorios
     ORDER BY (dt IS NULL), dt, id
   `).all();
 
-  const total_valor_cents = rows.reduce((s, r) => s + (r.valor_cents || 0), 0);
+  const total_valor_prometido_cents = rows.reduce((s, r) => s + (r.valor_prometido_cents || 0), 0);
+  const total_valor_entregue_cents = rows.reduce((s, r) => s + (r.valor_entregue_cents || 0), 0);
+  const total_valor_falta_cents = total_valor_prometido_cents - total_valor_entregue_cents;
 
   res.render('peditorios', {
     title: 'Peditórios',
     user: req.session.user,
     itens: rows,
-    total_valor_cents
+    total_valor_prometido_cents,
+    total_valor_entregue_cents,
+    total_valor_falta_cents
+  });
+});
+
+// NOVO (página)
+router.get('/peditorios/new', requireAuth, (req, res) => {
+  res.render('peditorios_new', {
+    title: 'Novo Peditório',
+    user: req.session.user
   });
 });
 
@@ -28,13 +44,14 @@ router.post('/peditorios', requireAuth, (req, res) => {
   const dt = (req.body.dt || null) || null;
   const local  = (req.body.local || '').trim() || null;
   const equipa = (req.body.equipa || '').trim() || null;
-  const valor_cents = cents(req.body.valor || 0);
+  const valor_prometido_cents = cents(req.body.valor_prometido || 0);
+  const valor_entregue_cents = cents(req.body.valor_entregue || 0);
   const notas = (req.body.notas || '').trim() || null;
 
   db.prepare(`
-    INSERT INTO peditorios (dt, local, equipa, valor_cents, notas)
-    VALUES (?,?,?,?,?)
-  `).run(dt, local, equipa, valor_cents, notas);
+    INSERT INTO peditorios (dt, local, equipa, valor_cents, valor_prometido_cents, valor_entregue_cents, notas)
+    VALUES (?,?,?,?,?,?,?)
+  `).run(dt, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, notas);
 
   res.redirect('/peditorios');
 });
@@ -45,14 +62,15 @@ router.post('/peditorios/:id', requireAuth, (req, res) => {
   const dt = (req.body.dt || null) || null;
   const local  = (req.body.local || '').trim() || null;
   const equipa = (req.body.equipa || '').trim() || null;
-  const valor_cents = cents(req.body.valor || 0);
+  const valor_prometido_cents = cents(req.body.valor_prometido || 0);
+  const valor_entregue_cents = cents(req.body.valor_entregue || 0);
   const notas = (req.body.notas || '').trim() || null;
 
   db.prepare(`
     UPDATE peditorios
-       SET dt=?, local=?, equipa=?, valor_cents=?, notas=?
+       SET dt=?, local=?, equipa=?, valor_cents=?, valor_prometido_cents=?, valor_entregue_cents=?, notas=?
      WHERE id=?
-  `).run(dt, local, equipa, valor_cents, notas, id);
+  `).run(dt, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, notas, id);
 
   res.redirect('/peditorios');
 });
