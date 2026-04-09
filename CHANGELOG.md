@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.5]
+### Fixed
+- Sessões em produção: removido bloqueio de arranque quando `SESSION_SECRET` não está definido; a aplicação passa a usar um fallback determinístico e emitir aviso.
+- Sessões em produção: adicionado modo estrito opcional com `STRICT_SESSION_SECRET=1` para forçar erro quando faltar `SESSION_SECRET`.
+- Migração de peditórios: corrigido backfill de `valor_prometido_cents` / `valor_entregue_cents` a partir de `valor_cents` em bases legadas.
+- Exportações: reforçada compatibilidade com esquemas antigos em patrocinadores/casais nas rotas de backup (CSV/ZIP/XLSX).
+
+### Changed
+- Qualidade de runtime: adicionado script `npm test` para validação sintática rápida (`node --check`).
+- Logging: pedidos HTTP continuam ativos por omissão em dev e ficam controláveis em produção via `LOG_REQUESTS=1`.
+
 ## [1.4.4]
 ### Added
 - Rodízio movido de **Definições** para a secção **Casais**, com ecrã completo em `/casais/rodizio`.
