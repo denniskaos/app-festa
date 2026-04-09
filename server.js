@@ -7,6 +7,7 @@ import compression from 'compression';
 import SQLiteStoreFactory from 'connect-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { createHash } from 'crypto';
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 
@@ -30,6 +31,14 @@ import peditoriosRoutes from './routes/peditorios.js';
 // __dirname em ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const APP_VERSION = (() => {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+    return pkg.version || 'dev';
+  } catch {
+    return 'dev';
+  }
+})();
 
 // ---- APP ----
 const app = express();
@@ -37,6 +46,9 @@ app.disable('x-powered-by');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 const PORT = Number(process.env.PORT || 3000);
+const SESSION_SECRET = process.env.SESSION_SECRET;
+const LOG_REQUESTS = process.env.LOG_REQUESTS === '1' || !IS_PROD;
+const STRICT_SESSION_SECRET = process.env.STRICT_SESSION_SECRET === '1';
 
 // Render está atrás de proxy → cookies e IP corretos
 app.set('trust proxy', 1);
@@ -44,6 +56,21 @@ app.set('trust proxy', 1);
 // Caminhos/vars
 const DB_PATH =
   process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'festa.db');
+const SECRET_FALLBACK_SEED =
+  process.env.RENDER_EXTERNAL_URL
+  || process.env.RENDER_SERVICE_ID
+  || DB_PATH
+  || 'festa-app';
+const FALLBACK_SESSION_SECRET = createHash('sha256')
+  .update(`festa-session:${SECRET_FALLBACK_SEED}`)
+  .digest('hex');
+const EFFECTIVE_SESSION_SECRET = SESSION_SECRET || FALLBACK_SESSION_SECRET;
+
+if (IS_PROD && !SESSION_SECRET) {
+  const msg = 'SESSION_SECRET em falta: usar fallback temporário (define SESSION_SECRET no Render).';
+  if (STRICT_SESSION_SECRET) throw new Error(`${msg} (STRICT_SESSION_SECRET=1)`);
+  console.warn(`[security] ${msg}`);
+}
 
 // Em Render (DATABASE_PATH presente) → /data/sessions.sqlite
 // Em dev/local → ./data/sessions.sqlite
@@ -74,6 +101,7 @@ app.set('layout', 'layout');
 app.set('layout extractScripts', true);
 app.set('layout extractStyles', true);
 app.use(expressLayouts);
+app.locals.releaseVersion = APP_VERSION;
 
 // ---- ESTÁTICOS ----
 app.use(
@@ -92,7 +120,7 @@ app.use(express.json());
 const SQLiteStore = SQLiteStoreFactory(session);
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'um-segredo-qualquer',
+    secret: EFFECTIVE_SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: new SQLiteStore({
@@ -114,11 +142,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- LOG SIMPLES ----
-app.use((req, _res, next) => {
-  console.log('[REQ]', req.method, req.url);
-  next();
-});
+// ---- LOG DE REQUESTS (ativo por defeito em dev; opcional em prod com LOG_REQUESTS=1) ----
+if (LOG_REQUESTS) {
+  app.use((req, _res, next) => {
+    console.log('[REQ]', req.method, req.url);
+    next();
+  });
+}
 
 // ---- HEALTHCHECK (Render) ----
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
