@@ -86,7 +86,7 @@ function sendCsv(res, filename, headers, rows) {
   lines.push('sep=;');
   lines.push(headers.map(escape).join(';'));
   for (const row of rows) lines.push(row.map(escape).join(';'));
-  res.send(lines.join('\r\n'));
+  res.send('\uFEFF' + lines.join('\r\n'));
 }
 
 /* Resolve o caminho do logo (usa settings.logo_path se existir, senão /public/img/logo.png) */
@@ -328,7 +328,7 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
       return needsQuote ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const lines = ['sep=;', headers.map(escape).join(';'), ...rows.map((r) => r.map(escape).join(';'))];
-    archive.append(lines.join('\r\n'), { name });
+    archive.append('\uFEFF' + lines.join('\r\n'), { name });
   };
 
   // movimentos
