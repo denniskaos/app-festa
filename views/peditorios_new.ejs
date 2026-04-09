@@ -1,0 +1,28 @@
+<div class="toolbar">
+  <h1>Novo Peditório</h1>
+</div>
+
+<form method="post" action="/peditorios" class="card" style="padding:12px">
+  <label>Nome da pessoa
+    <input type="text" name="nome_pessoa" placeholder="Nome da pessoa" />
+  </label><br>
+
+  <label>Local
+    <input type="text" name="local" placeholder="Rua/Bairro/Freguesia" />
+  </label><br>
+
+  <label>Equipa
+    <input type="text" name="equipa" placeholder="(opcional)" />
+  </label><br>
+
+  <label>Valor prometido (€)
+    <input type="number" step="0.01" inputmode="decimal" name="valor_prometido" required />
+  </label><br>
+
+  <label>Valor entregue (€)
+    <input type="number" step="0.01" inputmode="decimal" name="valor_entregue" required />
+  </label><br>
+
+  <button class="btn">Guardar</button>
+  <a class="btn btn-light" href="/peditorios">Cancelar</a>
+</form>

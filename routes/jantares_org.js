@@ -233,6 +233,18 @@ router.get('/jantares/:id/convidados', requireAuth, (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.post('/jantares/:id/convidados/presenca/todos', requireAuth, (req, res, next) => {
+  try {
+    const j = getJantarOr404(req.params.id);
+    db.prepare(`
+      UPDATE jantares_convidados
+         SET presenca=1
+       WHERE jantar_id=?
+    `).run(j.id);
+    res.redirect(`/jantares/${j.id}/convidados`);
+  } catch (e) { next(e); }
+});
+
 router.post('/jantares/:id/convidados', requireAuth, (req, res, next) => {
   try {
     const j = getJantarOr404(req.params.id);
@@ -521,4 +533,3 @@ router.get('/jantares/:id/mesas/print', requireAuth, (req, res, next) => {
 });
 
 export default router;
-
