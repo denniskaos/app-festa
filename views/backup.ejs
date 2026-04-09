@@ -1,7 +1,5 @@
 <!-- views/backup.ejs -->
 <%
-  const totalTabelas = (tables || []).length;
-  const totalRegistos = (tables || []).reduce((acc, t) => acc + Number((counts && counts[t.name]) || 0), 0);
   const csvMap = {
     movimentos: '/backup/export/movimentos.csv',
     jantares: '/backup/export/jantares.csv',
@@ -23,19 +21,12 @@
     </div>
   </div>
 
-  <div class="backup-kpis">
-    <article class="card kpi kpi-db">
-      <div class="kpi-label">Base de dados</div>
-      <div class="kpi-value kpi-path"><%= dbPath || '(caminho indisponível)' %></div>
-    </article>
-    <article class="card kpi kpi-tables">
-      <div class="kpi-label">Tabelas</div>
-      <div class="kpi-value"><%= totalTabelas %></div>
-    </article>
-    <article class="card kpi kpi-records">
-      <div class="kpi-label">Registos</div>
-      <div class="kpi-value"><%= totalRegistos %></div>
-    </article>
+  <div class="card backup-panel">
+    <header>
+      <h3>Base de dados</h3>
+      <p class="muted">Localização atual do ficheiro da base de dados.</p>
+    </header>
+    <div class="db-path"><%= dbPath || '(caminho indisponível)' %></div>
   </div>
 
   <div class="backup-grid">
@@ -133,32 +124,14 @@
     line-height: 1.1;
   }
 
-  .backup-kpis {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .kpi {
-    border-top: 3px solid transparent;
-    min-height: 92px;
-  }
-  .kpi-db { border-top-color: #2563eb; }
-  .kpi-tables { border-top-color: #16a34a; }
-  .kpi-records { border-top-color: #d97706; }
-  .kpi-label {
-    color: #6b7280;
-    font-size: 13px;
-    margin-bottom: 6px;
-  }
-  .kpi-value {
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.1;
-  }
-  .kpi-path {
+  .db-path {
     font-size: 14px;
-    word-break: break-all;
     font-weight: 600;
+    word-break: break-all;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
   }
 
   .backup-grid {
@@ -226,7 +199,6 @@
   }
   @media (max-width: 760px) {
     .backup-top { flex-direction: column; }
-    .backup-kpis { grid-template-columns: 1fr; }
     .btn-grid { grid-template-columns: 1fr; }
     .backup-top-actions { width: 100%; }
     .backup-top-actions .btn { width: 100%; text-align: center; }
