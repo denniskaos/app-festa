@@ -31,6 +31,14 @@ router.get('/peditorios', requireAuth, (req, res) => {
   });
 });
 
+// NOVO (página)
+router.get('/peditorios/new', requireAuth, (req, res) => {
+  res.render('peditorios_new', {
+    title: 'Novo Peditório',
+    user: req.session.user
+  });
+});
+
 // CRIAR
 router.post('/peditorios', requireAuth, (req, res) => {
   const dt = (req.body.dt || null) || null;

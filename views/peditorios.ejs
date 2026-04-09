@@ -1,31 +1,22 @@
 <div class="toolbar">
   <h1>Peditórios</h1>
+  <a class="btn" style="margin-left:auto" href="/peditorios/new">Novo</a>
 </div>
 
-<section class="card">
-  <h3>Novo peditório</h3>
-  <form method="post" action="/peditorios" class="form-grid">
-    <label>Data
-      <input type="date" name="dt" />
-    </label>
-    <label>Local
-      <input type="text" name="local" placeholder="Rua/Bairro/Freguesia" />
-    </label>
-    <label>Equipa
-      <input type="text" name="equipa" placeholder="(opcional)" />
-    </label>
-    <label>Valor prometido (€)
-      <input type="number" step="0.01" inputmode="decimal" name="valor_prometido" required />
-    </label>
-    <label>Valor entregue (€)
-      <input type="number" step="0.01" inputmode="decimal" name="valor_entregue" required />
-    </label>
-    <label style="grid-column:1/-1">Notas
-      <input type="text" name="notas" />
-    </label>
-    <button class="btn">Adicionar</button>
-  </form>
-</section>
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Total Prometido</div>
+    <div class="stat-number">€ <%= (total_valor_prometido_cents/100).toFixed(2) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Total Entregue</div>
+    <div class="stat-number">€ <%= (total_valor_entregue_cents/100).toFixed(2) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Em Falta</div>
+    <div class="stat-number">€ <%= (total_valor_falta_cents/100).toFixed(2) %></div>
+  </div>
+</div>
 
 <div class="cards" style="margin-bottom:12px;">
   <div class="card stat">
