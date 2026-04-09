@@ -18,6 +18,21 @@
   </div>
 </div>
 
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Total Prometido</div>
+    <div class="stat-number">€ <%= (total_valor_prometido_cents/100).toFixed(2) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Total Entregue</div>
+    <div class="stat-number">€ <%= (total_valor_entregue_cents/100).toFixed(2) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Em Falta</div>
+    <div class="stat-number">€ <%= (total_valor_falta_cents/100).toFixed(2) %></div>
+  </div>
+</div>
+
 <div class="card">
   <h3>Lista</h3>
 
