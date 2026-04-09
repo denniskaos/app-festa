@@ -1,6 +1,9 @@
 <!-- views/backup.ejs -->
 <div class="toolbar">
-  <h1><%= typeof title !== 'undefined' ? title : 'Backup' %></h1>
+  <div>
+    <h1 style="margin:0;"><%= typeof title !== 'undefined' ? title : 'Backup' %></h1>
+    <div class="muted" style="margin-top:4px;">Gestão de exportações e cópias de segurança.</div>
+  </div>
   <a class="btn btn-light" href="/dashboard" style="margin-left:auto">Voltar</a>
 </div>
 
@@ -9,24 +12,24 @@
   const totalRegistos = (tables || []).reduce((acc, t) => acc + Number((counts && counts[t.name]) || 0), 0);
 %>
 
-<div class="cards" style="margin-bottom:12px;">
-  <div class="card stat">
+<div class="cards stats-cards" style="margin-bottom:12px;">
+  <div class="card stat card-accent card-accent-blue">
     <div class="stat-label">Base de dados</div>
-    <div class="stat-number" style="font-size:14px; line-height:1.2; word-break:break-all;">
+    <div class="stat-number stat-path">
       <%= dbPath || '(caminho indisponível)' %>
     </div>
   </div>
-  <div class="card stat">
+  <div class="card stat card-accent card-accent-green">
     <div class="stat-label">Tabelas</div>
     <div class="stat-number"><%= totalTabelas %></div>
   </div>
-  <div class="card stat">
+  <div class="card stat card-accent card-accent-gold">
     <div class="stat-label">Total de registos</div>
     <div class="stat-number"><%= totalRegistos %></div>
   </div>
 </div>
 
-<div class="card" style="margin-bottom:12px;">
+<div class="card backup-section" style="margin-bottom:12px;">
   <h3 style="margin-top:0; margin-bottom:4px;">Exportar / Download</h3>
   <div class="muted" style="margin-bottom:12px;">Formatos completos para arquivo e partilha.</div>
   <div class="actions-grid">
@@ -38,7 +41,7 @@
   </div>
 </div>
 
-<div class="card" style="margin-bottom:12px;">
+<div class="card backup-section" style="margin-bottom:12px;">
   <h3 style="margin-top:0; margin-bottom:4px;">CSV rápidos</h3>
   <div class="muted" style="margin-bottom:12px;">Exportação imediata por área.</div>
   <div class="actions-grid">
@@ -51,7 +54,7 @@
   </div>
 </div>
 
-<div class="card">
+<div class="card backup-section">
   <h3 style="margin-top:0">Tabelas na base de dados</h3>
 
   <% 
@@ -66,7 +69,7 @@
     };
   %>
 
-  <table class="table">
+  <table class="table backup-table">
     <thead>
       <tr>
         <th style="width:220px">Tabela</th>
@@ -93,7 +96,7 @@
             <% if (csvMap[t.name]) { %>
               <a class="btn btn-light" href="<%= csvMap[t.name] %>">Exportar CSV</a>
             <% } else { %>
-              <span class="muted">Sem CSV direto</span>
+              <span class="pill-muted">Sem CSV direto</span>
             <% } %>
           </td>
         </tr>
@@ -103,6 +106,28 @@
 </div>
 
 <style>
+  .backup-section {
+    border: 1px solid var(--border, #e5e7eb);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.03);
+  }
+
+  .stats-cards .card {
+    min-height: 88px;
+  }
+
+  .card-accent {
+    border-top: 3px solid transparent;
+  }
+  .card-accent-blue { border-top-color: #3b82f6; }
+  .card-accent-green { border-top-color: #10b981; }
+  .card-accent-gold { border-top-color: #f59e0b; }
+
+  .stat-path {
+    font-size: 14px;
+    line-height: 1.2;
+    word-break: break-all;
+  }
+
   .actions-grid {
     display: grid;
     gap: 8px;
@@ -111,6 +136,23 @@
 
   .actions-grid .btn {
     text-align: center;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 8px 14px;
+  }
+
+  .backup-table tbody tr:nth-child(odd) {
+    background: rgba(15, 23, 42, 0.02);
+  }
+
+  .pill-muted {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 600;
   }
 
   /* ajustes para mobile */
