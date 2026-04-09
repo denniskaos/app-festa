@@ -32,14 +32,13 @@
           <th>Prometido (€)</th>
           <th>Entregue (€)</th>
           <th>Em falta (€)</th>
-          <th>Notas</th>
           <th style="width:220px">Ações</th>
         </tr>
       </thead>
 
       <tbody>
         <% if (!itens.length) { %>
-          <tr><td colspan="9" class="muted">Sem peditórios registados.</td></tr>
+          <tr><td colspan="8" class="muted">Sem peditórios registados.</td></tr>
         <% } %>
 
         <% itens.forEach(p => { const fid = `f-${p.id}`; %>
@@ -70,9 +69,6 @@
             </td>
             <td data-label="Em falta (€)">
               € <%= (((p.valor_prometido_cents||0) - (p.valor_entregue_cents||0))/100).toFixed(2) %>
-            </td>
-            <td data-label="Notas">
-              <input name="notas" value="<%= p.notas || '' %>" form="<%= fid %>">
             </td>
             <td data-label="Ações" class="actions">
               <button class="btn" form="<%= fid %>">Guardar</button>

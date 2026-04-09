@@ -11,8 +11,7 @@ router.get('/peditorios', requireAuth, (req, res) => {
     SELECT
       id, dt, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
       COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
-      COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
-      notas
+      COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents
     FROM peditorios
     ORDER BY (dt IS NULL), dt, id
   `).all();
@@ -47,12 +46,11 @@ router.post('/peditorios', requireAuth, (req, res) => {
   const equipa = (req.body.equipa || '').trim() || null;
   const valor_prometido_cents = cents(req.body.valor_prometido || 0);
   const valor_entregue_cents = cents(req.body.valor_entregue || 0);
-  const notas = (req.body.notas || '').trim() || null;
 
   db.prepare(`
-    INSERT INTO peditorios (dt, nome_pessoa, local, equipa, valor_cents, valor_prometido_cents, valor_entregue_cents, notas)
-    VALUES (?,?,?,?,?,?,?,?)
-  `).run(dt, nome_pessoa, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, notas);
+    INSERT INTO peditorios (dt, nome_pessoa, local, equipa, valor_cents, valor_prometido_cents, valor_entregue_cents)
+    VALUES (?,?,?,?,?,?,?)
+  `).run(dt, nome_pessoa, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents);
 
   res.redirect('/peditorios');
 });
@@ -66,13 +64,12 @@ router.post('/peditorios/:id', requireAuth, (req, res) => {
   const equipa = (req.body.equipa || '').trim() || null;
   const valor_prometido_cents = cents(req.body.valor_prometido || 0);
   const valor_entregue_cents = cents(req.body.valor_entregue || 0);
-  const notas = (req.body.notas || '').trim() || null;
 
   db.prepare(`
     UPDATE peditorios
-       SET dt=?, nome_pessoa=?, local=?, equipa=?, valor_cents=?, valor_prometido_cents=?, valor_entregue_cents=?, notas=?
+       SET dt=?, nome_pessoa=?, local=?, equipa=?, valor_cents=?, valor_prometido_cents=?, valor_entregue_cents=?
      WHERE id=?
-  `).run(dt, nome_pessoa, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, notas, id);
+  `).run(dt, nome_pessoa, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, id);
 
   res.redirect('/peditorios');
 });

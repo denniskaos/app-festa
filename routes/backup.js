@@ -302,8 +302,7 @@ router.get('/backup/export/peditorios.csv', requireAuth, (_req, res) => {
     SELECT
       id, dt, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
       COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
-      COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
-      notas
+      COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents
     FROM peditorios ORDER BY date(dt) DESC, id DESC
   `
     )
@@ -312,8 +311,7 @@ router.get('/backup/export/peditorios.csv', requireAuth, (_req, res) => {
     'id', 'dt', 'nome_pessoa', 'local', 'equipa',
     'valor_prometido_cents', 'valor_prometido_euros',
     'valor_entregue_cents', 'valor_entregue_euros',
-    'em_falta_cents', 'em_falta_euros',
-    'notas'
+    'em_falta_cents', 'em_falta_euros'
   ];
   const data = rows.map((r) => [
     r.id,
@@ -327,7 +325,6 @@ router.get('/backup/export/peditorios.csv', requireAuth, (_req, res) => {
     eurosFromCents(r.valor_entregue_cents),
     (r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0),
     eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
-    r.notas || '',
   ]);
   sendCsv(res, `peditorios-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
 });
@@ -470,8 +467,7 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
         SELECT
           id, dt, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
           COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
-          COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
-          notas
+          COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents
         FROM peditorios ORDER BY date(dt) DESC, id DESC
       `)
       .all();
@@ -479,8 +475,7 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
       'id', 'dt', 'nome_pessoa', 'local', 'equipa',
       'valor_prometido_cents', 'valor_prometido_euros',
       'valor_entregue_cents', 'valor_entregue_euros',
-      'em_falta_cents', 'em_falta_euros',
-      'notas'
+      'em_falta_cents', 'em_falta_euros'
     ];
     const data = rows.map((r) => [
       r.id,
@@ -494,7 +489,6 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
       eurosFromCents(r.valor_entregue_cents),
       (r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0),
       eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
-      r.notas || '',
     ]);
     addCsv('peditorios.csv', headers, data);
   }
@@ -655,8 +649,7 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
         SELECT
           id, dt, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
           COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
-          COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
-          notas
+          COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents
         FROM peditorios ORDER BY date(dt) DESC, id DESC
       `)
       .all();
@@ -664,8 +657,7 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
       'id', 'dt', 'nome_pessoa', 'local', 'equipa',
       'valor_prometido_cents', 'valor_prometido_euros',
       'valor_entregue_cents', 'valor_entregue_euros',
-      'em_falta_cents', 'em_falta_euros',
-      'notas'
+      'em_falta_cents', 'em_falta_euros'
     ];
     const data = rows.map((r) => [
       r.id,
@@ -679,7 +671,6 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
       eurosFromCents(r.valor_entregue_cents),
       (r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0),
       eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
-      r.notas || '',
     ]);
     addSheet('Peditorios', headers, data);
   }
