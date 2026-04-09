@@ -1,0 +1,24 @@
+<div class="toolbar">
+  <h1>Novo Serviço</h1>
+</div>
+
+<form method="post" action="/orcamento" class="card" style="padding:12px">
+  <label>Data
+    <input type="date" name="dt" />
+  </label><br>
+
+  <label>Descrição
+    <input type="text" name="descr" required />
+  </label><br>
+
+  <label>Valor (€)
+    <input type="number" step="0.01" name="valor" required />
+  </label><br>
+
+  <label>Notas
+    <textarea name="notas"></textarea>
+  </label><br>
+
+  <button class="btn">Guardar</button>
+  <a class="btn btn-light" href="/orcamento">Cancelar</a>
+</form>

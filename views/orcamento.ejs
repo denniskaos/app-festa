@@ -1,33 +1,22 @@
 <div class="toolbar">
   <h1>Orçamento</h1>
+  <a class="btn" style="margin-left:auto" href="/orcamento/new">Novo</a>
 </div>
 
-<!-- Estatística única: valor total do orçamento (soma das linhas) -->
 <div class="cards" style="margin-bottom:12px;">
   <div class="card stat">
     <div class="stat-label">Total do Orçamento</div>
     <div class="stat-number">€ <%= (total/100).toFixed(2) %></div>
   </div>
+  <div class="card stat">
+    <div class="stat-label">Saldo Final</div>
+    <div class="stat-number">€ <%= (saldoFinal/100).toFixed(2) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Valor em falta</div>
+    <div class="stat-number">€ <%= (valorEmFalta/100).toFixed(2) %></div>
+  </div>
 </div>
-
-<section class="card">
-  <h3>Novo serviço</h3>
-  <form method="post" action="/orcamento" class="form-grid">
-    <label>Data
-      <input type="date" name="dt" />
-    </label>
-    <label>Descrição
-      <input type="text" name="descr" required />
-    </label>
-    <label>Valor (€)
-      <input type="number" step="0.01" name="valor" required />
-    </label>
-    <label style="grid-column:1/-1">Notas
-      <input type="text" name="notas" />
-    </label>
-    <button class="btn">Adicionar</button>
-  </form>
-</section>
 
 <div class="card">
   <h2>Lista</h2>
