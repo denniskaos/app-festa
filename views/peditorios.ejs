@@ -25,7 +25,6 @@
     <table class="table table--form table--form-manual">
       <thead>
         <tr>
-          <th>Data</th>
           <th>Pessoa</th>
           <th>Local</th>
           <th>Equipa</th>
@@ -38,15 +37,13 @@
 
       <tbody>
         <% if (!itens.length) { %>
-          <tr><td colspan="8" class="muted">Sem peditórios registados.</td></tr>
+          <tr><td colspan="7" class="muted">Sem peditórios registados.</td></tr>
         <% } %>
 
         <% itens.forEach(p => { const fid = `f-${p.id}`; %>
           <tr>
-            <td data-label="Data">
-              <input type="date" name="dt"
-                     value="<%= (p.dt || '').slice(0,10) %>"
-                     form="<%= fid %>">
+            <td data-label="Pessoa">
+              <input name="nome_pessoa" value="<%= p.nome_pessoa || '' %>" form="<%= fid %>">
             </td>
             <td data-label="Pessoa">
               <input name="nome_pessoa" value="<%= p.nome_pessoa || '' %>" form="<%= fid %>">
