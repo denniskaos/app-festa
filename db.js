@@ -57,9 +57,12 @@ const migrate = db.transaction(() => {
     CREATE TABLE IF NOT EXISTS peditorios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       dt TEXT,
+      nome_pessoa TEXT,
       local TEXT,
       equipa TEXT,
       valor_cents INTEGER NOT NULL DEFAULT 0,
+      valor_prometido_cents INTEGER NOT NULL DEFAULT 0,
+      valor_entregue_cents INTEGER NOT NULL DEFAULT 0,
       notas TEXT
     );
 
@@ -145,6 +148,18 @@ const migrate = db.transaction(() => {
   // garantir colunas novas (idempotente)
   try { db.exec(`ALTER TABLE jantares ADD COLUMN lancado INTEGER NOT NULL DEFAULT 0`); } catch {}
   try { db.exec(`ALTER TABLE jantares_convidados ADD COLUMN preco_cents INTEGER`); } catch {}
+  try { db.exec(`ALTER TABLE peditorios ADD COLUMN nome_pessoa TEXT`); } catch {}
+  try { db.exec(`ALTER TABLE peditorios ADD COLUMN valor_prometido_cents INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.exec(`ALTER TABLE peditorios ADD COLUMN valor_entregue_cents INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try {
+    db.exec(`
+      UPDATE peditorios
+         SET valor_prometido_cents = COALESCE(valor_prometido_cents, valor_cents, 0),
+             valor_entregue_cents = COALESCE(valor_entregue_cents, valor_cents, 0)
+       WHERE COALESCE(valor_prometido_cents, 0)=0
+          OR COALESCE(valor_entregue_cents, 0)=0
+    `);
+  } catch {}
 
   // --- Despesas detalhadas de jantares ---
   db.exec(`

@@ -1,28 +1,22 @@
 <div class="toolbar">
   <h1>Peditórios</h1>
+  <a class="btn" style="margin-left:auto" href="/peditorios/new">Novo</a>
 </div>
 
-<section class="card">
-  <h3>Novo peditório</h3>
-  <form method="post" action="/peditorios" class="form-grid">
-    <label>Data
-      <input type="date" name="dt" />
-    </label>
-    <label>Local
-      <input type="text" name="local" placeholder="Rua/Bairro/Freguesia" />
-    </label>
-    <label>Equipa
-      <input type="text" name="equipa" placeholder="(opcional)" />
-    </label>
-    <label>Valor (€)
-      <input type="number" step="0.01" inputmode="decimal" name="valor" required />
-    </label>
-    <label style="grid-column:1/-1">Notas
-      <input type="text" name="notas" />
-    </label>
-    <button class="btn">Adicionar</button>
-  </form>
-</section>
+<div class="cards" style="margin-bottom:12px;">
+  <div class="card stat">
+    <div class="stat-label">Total Prometido</div>
+    <div class="stat-number">€ <%= (total_valor_prometido_cents/100).toFixed(2) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Total Entregue</div>
+    <div class="stat-number">€ <%= (total_valor_entregue_cents/100).toFixed(2) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Em Falta</div>
+    <div class="stat-number">€ <%= (total_valor_falta_cents/100).toFixed(2) %></div>
+  </div>
+</div>
 
 <div class="card">
   <h3>Lista</h3>
@@ -32,17 +26,19 @@
       <thead>
         <tr>
           <th>Data</th>
+          <th>Pessoa</th>
           <th>Local</th>
           <th>Equipa</th>
-          <th>Valor (€)</th>
-          <th>Notas</th>
+          <th>Prometido (€)</th>
+          <th>Entregue (€)</th>
+          <th>Em falta (€)</th>
           <th style="width:220px">Ações</th>
         </tr>
       </thead>
 
       <tbody>
         <% if (!itens.length) { %>
-          <tr><td colspan="6" class="muted">Sem peditórios registados.</td></tr>
+          <tr><td colspan="8" class="muted">Sem peditórios registados.</td></tr>
         <% } %>
 
         <% itens.forEach(p => { const fid = `f-${p.id}`; %>
@@ -52,19 +48,27 @@
                      value="<%= (p.dt || '').slice(0,10) %>"
                      form="<%= fid %>">
             </td>
+            <td data-label="Pessoa">
+              <input name="nome_pessoa" value="<%= p.nome_pessoa || '' %>" form="<%= fid %>">
+            </td>
             <td data-label="Local">
               <input name="local" value="<%= p.local || '' %>" form="<%= fid %>">
             </td>
             <td data-label="Equipa">
               <input name="equipa" value="<%= p.equipa || '' %>" form="<%= fid %>">
             </td>
-            <td data-label="Valor (€)">
-              <input name="valor" inputmode="decimal" step="0.01"
-                     value="<%= ((p.valor_cents||0)/100).toFixed(2) %>"
+            <td data-label="Prometido (€)">
+              <input name="valor_prometido" inputmode="decimal" step="0.01"
+                     value="<%= ((p.valor_prometido_cents||0)/100).toFixed(2) %>"
                      form="<%= fid %>">
             </td>
-            <td data-label="Notas">
-              <input name="notas" value="<%= p.notas || '' %>" form="<%= fid %>">
+            <td data-label="Entregue (€)">
+              <input name="valor_entregue" inputmode="decimal" step="0.01"
+                     value="<%= ((p.valor_entregue_cents||0)/100).toFixed(2) %>"
+                     form="<%= fid %>">
+            </td>
+            <td data-label="Em falta (€)">
+              € <%= (((p.valor_prometido_cents||0) - (p.valor_entregue_cents||0))/100).toFixed(2) %>
             </td>
             <td data-label="Ações" class="actions">
               <button class="btn" form="<%= fid %>">Guardar</button>
@@ -79,13 +83,6 @@
         <% }) %>
       </tbody>
 
-      <tfoot>
-        <tr>
-          <th colspan="3" style="text-align:right">Total</th>
-          <th>€ <%= (total_valor_cents/100).toFixed(2) %></th>
-          <th colspan="2"></th>
-        </tr>
-      </tfoot>
     </table>
   </div>
 </div>
