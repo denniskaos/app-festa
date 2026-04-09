@@ -51,6 +51,16 @@ function eurosFromCents(c) {
   return (n / 100).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function casalValorExpr() {
+  try {
+    const cols = db.prepare(`PRAGMA table_info('casais')`).all().map((c) => c.name);
+    if (cols.includes('valor_casa_cents')) return 'COALESCE(valor_casa_cents,0)';
+    if (cols.includes('cash_cents')) return 'COALESCE(cash_cents,0)';
+    if (cols.includes('valor_cents')) return 'COALESCE(valor_cents,0)';
+  } catch {}
+  return '0';
+}
+
 // Tenta obter o caminho real do ficheiro da DB
 function getDbFilePath() {
   // 1) tentar via better-sqlite3
@@ -256,7 +266,14 @@ router.get('/backup/export/patrocinadores.csv', requireAuth, (_req, res) => {
   const rows = db
     .prepare(
       `
-    SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ
+    SELECT
+      id,
+      name,
+      contacto,
+      tipo,
+      COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
+      COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
+      observ
     FROM patrocinadores ORDER BY name COLLATE NOCASE
   `
     )
@@ -301,7 +318,11 @@ router.get('/backup/export/peditorios.csv', requireAuth, (_req, res) => {
 });
 
 router.get('/backup/export/casais.csv', requireAuth, (_req, res) => {
-  const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
+  const rows = db.prepare(`
+    SELECT id, nome, ${casalValorExpr()} AS valor_casa_cents
+    FROM casais
+    ORDER BY id
+  `).all();
   const headers = ['ID', 'Nome', 'Valor (€)'];
   const data = rows.map((r) => [r.id, r.nome || '', eurosFromCents(r.valor_casa_cents)]);
   sendCsv(res, `casais-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
@@ -395,7 +416,18 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
   {
     const rows = db
       .prepare(
-        `SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ FROM patrocinadores ORDER BY name COLLATE NOCASE`
+        `
+        SELECT
+          id,
+          name,
+          contacto,
+          tipo,
+          COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
+          COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
+          observ
+        FROM patrocinadores
+        ORDER BY name COLLATE NOCASE
+        `
       )
       .all();
     const headers = ['ID', 'Nome', 'Contacto', 'Tipo', 'Prometido (€)', 'Entregue (€)', 'Em Falta (€)', 'Observações'];
@@ -436,7 +468,11 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
   }
   // casais
   {
-    const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
+    const rows = db.prepare(`
+      SELECT id, nome, ${casalValorExpr()} AS valor_casa_cents
+      FROM casais
+      ORDER BY id
+    `).all();
     const headers = ['ID', 'Nome', 'Valor (€)'];
     const data = rows.map((r) => [r.id, r.nome || '', eurosFromCents(r.valor_casa_cents)]);
     addCsv('casais.csv', headers, data);
@@ -546,7 +582,18 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
   {
     const rows = db
       .prepare(
-        `SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ FROM patrocinadores ORDER BY name COLLATE NOCASE`
+        `
+        SELECT
+          id,
+          name,
+          contacto,
+          tipo,
+          COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
+          COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
+          observ
+        FROM patrocinadores
+        ORDER BY name COLLATE NOCASE
+        `
       )
       .all();
     const headers = ['ID', 'Nome', 'Contacto', 'Tipo', 'Prometido (€)', 'Entregue (€)', 'Em Falta (€)', 'Observações'];
@@ -585,7 +632,11 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
     addSheet('Peditorios', headers, data);
   }
   {
-    const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
+    const rows = db.prepare(`
+      SELECT id, nome, ${casalValorExpr()} AS valor_casa_cents
+      FROM casais
+      ORDER BY id
+    `).all();
     const headers = ['ID', 'Nome', 'Valor (€)'];
     const data = rows.map((r) => [r.id, r.nome || '', eurosFromCents(r.valor_casa_cents)]);
     addSheet('Casais', headers, data);

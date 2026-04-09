@@ -154,10 +154,21 @@ const migrate = db.transaction(() => {
   try {
     db.exec(`
       UPDATE peditorios
-         SET valor_prometido_cents = COALESCE(valor_prometido_cents, valor_cents, 0),
-             valor_entregue_cents = COALESCE(valor_entregue_cents, valor_cents, 0)
-       WHERE COALESCE(valor_prometido_cents, 0)=0
-          OR COALESCE(valor_entregue_cents, 0)=0
+         SET valor_prometido_cents = CASE
+               WHEN COALESCE(valor_prometido_cents, 0) = 0 AND COALESCE(valor_cents, 0) > 0
+                 THEN valor_cents
+               ELSE valor_prometido_cents
+             END,
+             valor_entregue_cents = CASE
+               WHEN COALESCE(valor_entregue_cents, 0) = 0 AND COALESCE(valor_cents, 0) > 0
+                 THEN valor_cents
+               ELSE valor_entregue_cents
+             END
+       WHERE COALESCE(valor_cents, 0) > 0
+         AND (
+           COALESCE(valor_prometido_cents, 0) = 0
+           OR COALESCE(valor_entregue_cents, 0) = 0
+         )
     `);
   } catch {}
 

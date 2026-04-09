@@ -1,9 +1,7 @@
-// routes/finance.js  // v-clean-rodizio-pt-2025-10-16
+// routes/finance.js
 import { Router } from 'express';
 import db, { euros, cents } from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-
-console.log('[finance.js] versão: v-clean-rodizio-pt-2025-10-16');
 
 const router = Router();
 
