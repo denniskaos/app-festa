@@ -74,7 +74,7 @@ function getDbFilePath() {
 
 // CSV helper (usa ; como separador + primeira linha "sep=;")
 function sendCsv(res, filename, headers, rows) {
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-16le');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   const escape = (v) => {
     if (v === null || v === undefined) return '';
@@ -86,7 +86,10 @@ function sendCsv(res, filename, headers, rows) {
   lines.push('sep=;');
   lines.push(headers.map(escape).join(';'));
   for (const row of rows) lines.push(row.map(escape).join(';'));
-  res.send('\uFEFF' + lines.join('\r\n'));
+  const csvBody = lines.join('\r\n');
+  const bomUtf16Le = Buffer.from([0xff, 0xfe]);
+  const payload = Buffer.concat([bomUtf16Le, Buffer.from(csvBody, 'utf16le')]);
+  res.send(payload);
 }
 
 /* Resolve o caminho do logo (usa settings.logo_path se existir, senão /public/img/logo.png) */
@@ -328,7 +331,10 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
       return needsQuote ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const lines = ['sep=;', headers.map(escape).join(';'), ...rows.map((r) => r.map(escape).join(';'))];
-    archive.append('\uFEFF' + lines.join('\r\n'), { name });
+    const csvBody = lines.join('\r\n');
+    const bomUtf16Le = Buffer.from([0xff, 0xfe]);
+    const payload = Buffer.concat([bomUtf16Le, Buffer.from(csvBody, 'utf16le')]);
+    archive.append(payload, { name });
   };
 
   // movimentos
