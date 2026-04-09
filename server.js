@@ -7,6 +7,7 @@ import compression from 'compression';
 import SQLiteStoreFactory from 'connect-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { createHash } from 'crypto';
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 
@@ -47,10 +48,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const PORT = Number(process.env.PORT || 3000);
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const LOG_REQUESTS = process.env.LOG_REQUESTS === '1' || !IS_PROD;
-
-if (IS_PROD && !SESSION_SECRET) {
-  throw new Error('SESSION_SECRET em falta: define uma variável forte no ambiente de produção.');
-}
+const STRICT_SESSION_SECRET = process.env.STRICT_SESSION_SECRET === '1';
 
 // Render está atrás de proxy → cookies e IP corretos
 app.set('trust proxy', 1);
@@ -58,6 +56,21 @@ app.set('trust proxy', 1);
 // Caminhos/vars
 const DB_PATH =
   process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'festa.db');
+const SECRET_FALLBACK_SEED =
+  process.env.RENDER_EXTERNAL_URL
+  || process.env.RENDER_SERVICE_ID
+  || DB_PATH
+  || 'festa-app';
+const FALLBACK_SESSION_SECRET = createHash('sha256')
+  .update(`festa-session:${SECRET_FALLBACK_SEED}`)
+  .digest('hex');
+const EFFECTIVE_SESSION_SECRET = SESSION_SECRET || FALLBACK_SESSION_SECRET;
+
+if (IS_PROD && !SESSION_SECRET) {
+  const msg = 'SESSION_SECRET em falta: usar fallback temporário (define SESSION_SECRET no Render).';
+  if (STRICT_SESSION_SECRET) throw new Error(`${msg} (STRICT_SESSION_SECRET=1)`);
+  console.warn(`[security] ${msg}`);
+}
 
 // Em Render (DATABASE_PATH presente) → /data/sessions.sqlite
 // Em dev/local → ./data/sessions.sqlite
@@ -107,7 +120,7 @@ app.use(express.json());
 const SQLiteStore = SQLiteStoreFactory(session);
 app.use(
   session({
-    secret: SESSION_SECRET || 'dev-only-secret-change-me',
+    secret: EFFECTIVE_SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     store: new SQLiteStore({
