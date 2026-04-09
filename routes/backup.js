@@ -48,7 +48,7 @@ function toSqlLiteral(v) {
 
 function eurosFromCents(c) {
   const n = Number(c ?? 0);
-  return (n / 100).toFixed(2);
+  return (n / 100).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // Tenta obter o caminho real do ficheiro da DB
@@ -197,14 +197,13 @@ router.get('/backup/export/movimentos.csv', requireAuth, (_req, res) => {
   `
     )
     .all();
-  const headers = ['id', 'dt', 'type', 'categoria', 'descr', 'valor_cents', 'valor_euros'];
+  const headers = ['ID', 'Data', 'Tipo', 'Categoria', 'Descrição', 'Valor (€)'];
   const data = rows.map((r) => [
     r.id,
     r.dt || '',
     r.type || '',
     r.categoria || '',
     r.descr || '',
-    r.valor_cents ?? 0,
     eurosFromCents(r.valor_cents),
   ]);
   sendCsv(res, `movimentos-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
@@ -219,22 +218,12 @@ router.get('/backup/export/jantares.csv', requireAuth, (_req, res) => {
   `
     )
     .all();
-  const headers = [
-    'id',
-    'dt',
-    'pessoas',
-    'valor_pessoa_cents',
-    'valor_pessoa_euros',
-    'despesas_cents',
-    'despesas_euros',
-  ];
+  const headers = ['ID', 'Data', 'Pessoas', 'Valor por Pessoa (€)', 'Despesas (€)'];
   const data = rows.map((r) => [
     r.id,
     r.dt || '',
     r.pessoas ?? 0,
-    r.valor_pessoa_cents ?? 0,
     eurosFromCents(r.valor_pessoa_cents),
-    r.despesas_cents ?? 0,
     eurosFromCents(r.despesas_cents),
   ]);
   sendCsv(res, `jantares-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
@@ -249,12 +238,11 @@ router.get('/backup/export/orcamento.csv', requireAuth, (_req, res) => {
   `
     )
     .all();
-  const headers = ['id', 'dt', 'descr', 'valor_cents', 'valor_euros', 'notas'];
+  const headers = ['ID', 'Data', 'Descrição', 'Valor (€)', 'Notas'];
   const data = rows.map((r) => [
     r.id,
     r.dt || '',
     r.descr || '',
-    r.valor_cents ?? 0,
     eurosFromCents(r.valor_cents),
     r.notas || '',
   ]);
@@ -270,26 +258,15 @@ router.get('/backup/export/patrocinadores.csv', requireAuth, (_req, res) => {
   `
     )
     .all();
-  const headers = [
-    'id',
-    'name',
-    'contacto',
-    'tipo',
-    'valor_prometido_cents',
-    'valor_prometido_euros',
-    'valor_entregue_cents',
-    'valor_entregue_euros',
-    'observ',
-  ];
+  const headers = ['ID', 'Nome', 'Contacto', 'Tipo', 'Prometido (€)', 'Entregue (€)', 'Em Falta (€)', 'Observações'];
   const data = rows.map((r) => [
     r.id,
     r.name || '',
     r.contacto || '',
     r.tipo || '',
-    r.valor_prometido_cents ?? 0,
     eurosFromCents(r.valor_prometido_cents),
-    r.valor_entregue_cents ?? 0,
     eurosFromCents(r.valor_entregue_cents),
+    eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
     r.observ || '',
   ]);
   sendCsv(res, `patrocinadores-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
@@ -299,28 +276,31 @@ router.get('/backup/export/peditorios.csv', requireAuth, (_req, res) => {
   const rows = db
     .prepare(
       `
-    SELECT id, dt, local, equipa, valor_cents, notas
-    FROM peditorios ORDER BY date(dt) DESC, id DESC
+    SELECT
+      id, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
+      COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
+      COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents
+    FROM peditorios ORDER BY id DESC
   `
     )
     .all();
-  const headers = ['id', 'dt', 'local', 'equipa', 'valor_cents', 'valor_euros', 'notas'];
+  const headers = ['ID', 'Pessoa', 'Local', 'Equipa', 'Prometido (€)', 'Entregue (€)', 'Em Falta (€)'];
   const data = rows.map((r) => [
     r.id,
-    r.dt || '',
+    r.nome_pessoa || '',
     r.local || '',
     r.equipa || '',
-    r.valor_cents ?? 0,
-    eurosFromCents(r.valor_cents),
-    r.notas || '',
+    eurosFromCents(r.valor_prometido_cents),
+    eurosFromCents(r.valor_entregue_cents),
+    eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
   ]);
   sendCsv(res, `peditorios-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
 });
 
 router.get('/backup/export/casais.csv', requireAuth, (_req, res) => {
   const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
-  const headers = ['id', 'nome', 'valor_casa_cents', 'valor_casa_euros'];
-  const data = rows.map((r) => [r.id, r.nome || '', r.valor_casa_cents ?? 0, eurosFromCents(r.valor_casa_cents)]);
+  const headers = ['ID', 'Nome', 'Valor (€)'];
+  const data = rows.map((r) => [r.id, r.nome || '', eurosFromCents(r.valor_casa_cents)]);
   sendCsv(res, `casais-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
 });
 
@@ -362,14 +342,13 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
     `
       )
       .all();
-    const headers = ['id', 'dt', 'type', 'categoria', 'descr', 'valor_cents', 'valor_euros'];
+    const headers = ['ID', 'Data', 'Tipo', 'Categoria', 'Descrição', 'Valor (€)'];
     const data = rows.map((r) => [
       r.id,
       r.dt || '',
       r.type || '',
       r.categoria || '',
       r.descr || '',
-      r.valor_cents ?? 0,
       eurosFromCents(r.valor_cents),
     ]);
     addCsv('movimentos.csv', headers, data);
@@ -381,22 +360,12 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
         `SELECT id, dt, pessoas, valor_pessoa_cents, despesas_cents FROM jantares ORDER BY date(dt) DESC, id DESC`
       )
       .all();
-    const headers = [
-      'id',
-      'dt',
-      'pessoas',
-      'valor_pessoa_cents',
-      'valor_pessoa_euros',
-      'despesas_cents',
-      'despesas_euros',
-    ];
+    const headers = ['ID', 'Data', 'Pessoas', 'Valor por Pessoa (€)', 'Despesas (€)'];
     const data = rows.map((r) => [
       r.id,
       r.dt || '',
       r.pessoas ?? 0,
-      r.valor_pessoa_cents ?? 0,
       eurosFromCents(r.valor_pessoa_cents),
-      r.despesas_cents ?? 0,
       eurosFromCents(r.despesas_cents),
     ]);
     addCsv('jantares.csv', headers, data);
@@ -406,12 +375,11 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
     const rows = db
       .prepare(`SELECT id, dt, descr, valor_cents, notas FROM orcamento_servicos ORDER BY date(dt) DESC, id DESC`)
       .all();
-    const headers = ['id', 'dt', 'descr', 'valor_cents', 'valor_euros', 'notas'];
+    const headers = ['ID', 'Data', 'Descrição', 'Valor (€)', 'Notas'];
     const data = rows.map((r) => [
       r.id,
       r.dt || '',
       r.descr || '',
-      r.valor_cents ?? 0,
       eurosFromCents(r.valor_cents),
       r.notas || '',
     ]);
@@ -424,26 +392,15 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
         `SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ FROM patrocinadores ORDER BY name COLLATE NOCASE`
       )
       .all();
-    const headers = [
-      'id',
-      'name',
-      'contacto',
-      'tipo',
-      'valor_prometido_cents',
-      'valor_prometido_euros',
-      'valor_entregue_cents',
-      'valor_entregue_euros',
-      'observ',
-    ];
+    const headers = ['ID', 'Nome', 'Contacto', 'Tipo', 'Prometido (€)', 'Entregue (€)', 'Em Falta (€)', 'Observações'];
     const data = rows.map((r) => [
       r.id,
       r.name || '',
       r.contacto || '',
       r.tipo || '',
-      r.valor_prometido_cents ?? 0,
       eurosFromCents(r.valor_prometido_cents),
-      r.valor_entregue_cents ?? 0,
       eurosFromCents(r.valor_entregue_cents),
+      eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
       r.observ || '',
     ]);
     addCsv('patrocinadores.csv', headers, data);
@@ -451,25 +408,31 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
   // peditorios
   {
     const rows = db
-      .prepare(`SELECT id, dt, local, equipa, valor_cents, notas FROM peditorios ORDER BY date(dt) DESC, id DESC`)
+      .prepare(`
+        SELECT
+          id, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
+          COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
+          COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents
+        FROM peditorios ORDER BY id DESC
+      `)
       .all();
-    const headers = ['id', 'dt', 'local', 'equipa', 'valor_cents', 'valor_euros', 'notas'];
+    const headers = ['ID', 'Pessoa', 'Local', 'Equipa', 'Prometido (€)', 'Entregue (€)', 'Em Falta (€)'];
     const data = rows.map((r) => [
       r.id,
-      r.dt || '',
+      r.nome_pessoa || '',
       r.local || '',
       r.equipa || '',
-      r.valor_cents ?? 0,
-      eurosFromCents(r.valor_cents),
-      r.notas || '',
+      eurosFromCents(r.valor_prometido_cents),
+      eurosFromCents(r.valor_entregue_cents),
+      eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
     ]);
     addCsv('peditorios.csv', headers, data);
   }
   // casais
   {
     const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
-    const headers = ['id', 'nome', 'valor_casa_cents', 'valor_casa_euros'];
-    const data = rows.map((r) => [r.id, r.nome || '', r.valor_casa_cents ?? 0, eurosFromCents(r.valor_casa_cents)]);
+    const headers = ['ID', 'Nome', 'Valor (€)'];
+    const data = rows.map((r) => [r.id, r.nome || '', eurosFromCents(r.valor_casa_cents)]);
     addCsv('casais.csv', headers, data);
   }
 
@@ -533,14 +496,13 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
     `
       )
       .all();
-    const headers = ['id', 'dt', 'type', 'categoria', 'descr', 'valor_cents', 'valor_euros'];
+    const headers = ['ID', 'Data', 'Tipo', 'Categoria', 'Descrição', 'Valor (€)'];
     const data = rows.map((r) => [
       r.id,
       r.dt || '',
       r.type || '',
       r.categoria || '',
       r.descr || '',
-      r.valor_cents ?? 0,
       eurosFromCents(r.valor_cents),
     ]);
     addSheet('Movimentos', headers, data);
@@ -551,22 +513,12 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
         `SELECT id, dt, pessoas, valor_pessoa_cents, despesas_cents FROM jantares ORDER BY date(dt) DESC, id DESC`
       )
       .all();
-    const headers = [
-      'id',
-      'dt',
-      'pessoas',
-      'valor_pessoa_cents',
-      'valor_pessoa_euros',
-      'despesas_cents',
-      'despesas_euros',
-    ];
+    const headers = ['ID', 'Data', 'Pessoas', 'Valor por Pessoa (€)', 'Despesas (€)'];
     const data = rows.map((r) => [
       r.id,
       r.dt || '',
       r.pessoas ?? 0,
-      r.valor_pessoa_cents ?? 0,
       eurosFromCents(r.valor_pessoa_cents),
-      r.despesas_cents ?? 0,
       eurosFromCents(r.despesas_cents),
     ]);
     addSheet('Jantares', headers, data);
@@ -575,12 +527,11 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
     const rows = db
       .prepare(`SELECT id, dt, descr, valor_cents, notas FROM orcamento_servicos ORDER BY date(dt) DESC, id DESC`)
       .all();
-    const headers = ['id', 'dt', 'descr', 'valor_cents', 'valor_euros', 'notas'];
+    const headers = ['ID', 'Data', 'Descrição', 'Valor (€)', 'Notas'];
     const data = rows.map((r) => [
       r.id,
       r.dt || '',
       r.descr || '',
-      r.valor_cents ?? 0,
       eurosFromCents(r.valor_cents),
       r.notas || '',
     ]);
@@ -592,50 +543,45 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
         `SELECT id, name, contacto, tipo, valor_prometido_cents, valor_entregue_cents, observ FROM patrocinadores ORDER BY name COLLATE NOCASE`
       )
       .all();
-    const headers = [
-      'id',
-      'name',
-      'contacto',
-      'tipo',
-      'valor_prometido_cents',
-      'valor_prometido_euros',
-      'valor_entregue_cents',
-      'valor_entregue_euros',
-      'observ',
-    ];
+    const headers = ['ID', 'Nome', 'Contacto', 'Tipo', 'Prometido (€)', 'Entregue (€)', 'Em Falta (€)', 'Observações'];
     const data = rows.map((r) => [
       r.id,
       r.name || '',
       r.contacto || '',
       r.tipo || '',
-      r.valor_prometido_cents ?? 0,
       eurosFromCents(r.valor_prometido_cents),
-      r.valor_entregue_cents ?? 0,
       eurosFromCents(r.valor_entregue_cents),
+      eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
       r.observ || '',
     ]);
     addSheet('Patrocinadores', headers, data);
   }
   {
     const rows = db
-      .prepare(`SELECT id, dt, local, equipa, valor_cents, notas FROM peditorios ORDER BY date(dt) DESC, id DESC`)
+      .prepare(`
+        SELECT
+          id, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
+          COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
+          COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents
+        FROM peditorios ORDER BY id DESC
+      `)
       .all();
-    const headers = ['id', 'dt', 'local', 'equipa', 'valor_cents', 'valor_euros', 'notas'];
+    const headers = ['ID', 'Pessoa', 'Local', 'Equipa', 'Prometido (€)', 'Entregue (€)', 'Em Falta (€)'];
     const data = rows.map((r) => [
       r.id,
-      r.dt || '',
+      r.nome_pessoa || '',
       r.local || '',
       r.equipa || '',
-      r.valor_cents ?? 0,
-      eurosFromCents(r.valor_cents),
-      r.notas || '',
+      eurosFromCents(r.valor_prometido_cents),
+      eurosFromCents(r.valor_entregue_cents),
+      eurosFromCents((r.valor_prometido_cents ?? 0) - (r.valor_entregue_cents ?? 0)),
     ]);
     addSheet('Peditorios', headers, data);
   }
   {
     const rows = db.prepare(`SELECT id, nome, valor_casa_cents FROM casais ORDER BY id`).all();
-    const headers = ['id', 'nome', 'valor_casa_cents', 'valor_casa_euros'];
-    const data = rows.map((r) => [r.id, r.nome || '', r.valor_casa_cents ?? 0, eurosFromCents(r.valor_casa_cents)]);
+    const headers = ['ID', 'Nome', 'Valor (€)'];
+    const data = rows.map((r) => [r.id, r.nome || '', eurosFromCents(r.valor_casa_cents)]);
     addSheet('Casais', headers, data);
   }
 
