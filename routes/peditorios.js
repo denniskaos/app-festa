@@ -54,8 +54,25 @@ router.post('/peditorios', requireAuth, (req, res) => {
   res.redirect('/peditorios');
 });
 
+// EDITAR (página)
+router.get('/peditorios/:id/edit', requireAuth, (req, res) => {
+  const p = db.prepare(`
+    SELECT
+      id,
+      COALESCE(nome_pessoa,'') AS nome_pessoa,
+      COALESCE(local,'') AS local,
+      COALESCE(equipa,'') AS equipa,
+      COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
+      COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents
+    FROM peditorios
+    WHERE id=?
+  `).get(req.params.id);
+  if (!p) return res.status(404).type('text').send('Peditório não encontrado');
+  res.render('peditorios_edit', { title: 'Editar Peditório', user: req.session.user, p });
+});
+
 // EDITAR
-router.post('/peditorios/:id', requireAuth, (req, res) => {
+router.post('/peditorios/:id/update', requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const nome_pessoa = (req.body.nome_pessoa || '').trim() || null;
   const local  = (req.body.local || '').trim() || null;

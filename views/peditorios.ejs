@@ -22,7 +22,7 @@
   <h3>Lista</h3>
 
   <div class="table-wrap">
-    <table class="table table--form table--form-manual">
+    <table class="table">
       <thead>
         <tr>
           <th>Pessoa</th>
@@ -40,32 +40,28 @@
           <tr><td colspan="7" class="muted">Sem peditórios registados.</td></tr>
         <% } %>
 
-        <% itens.forEach(p => { const fid = `f-${p.id}`; %>
+        <% itens.forEach(p => { %>
           <tr>
             <td data-label="Pessoa">
-              <input name="nome_pessoa" value="<%= p.nome_pessoa || '' %>" form="<%= fid %>">
+              <%= p.nome_pessoa || '—' %>
             </td>
             <td data-label="Local">
-              <input name="local" value="<%= p.local || '' %>" form="<%= fid %>">
+              <%= p.local || '—' %>
             </td>
             <td data-label="Equipa">
-              <input name="equipa" value="<%= p.equipa || '' %>" form="<%= fid %>">
+              <%= p.equipa || '—' %>
             </td>
             <td data-label="Prometido (€)">
-              <input name="valor_prometido" inputmode="decimal" step="0.01"
-                     value="<%= ((p.valor_prometido_cents||0)/100).toFixed(2) %>"
-                     form="<%= fid %>">
+              € <%= ((p.valor_prometido_cents||0)/100).toFixed(2) %>
             </td>
             <td data-label="Entregue (€)">
-              <input name="valor_entregue" inputmode="decimal" step="0.01"
-                     value="<%= ((p.valor_entregue_cents||0)/100).toFixed(2) %>"
-                     form="<%= fid %>">
+              € <%= ((p.valor_entregue_cents||0)/100).toFixed(2) %>
             </td>
             <td data-label="Em falta (€)">
               € <%= (((p.valor_prometido_cents||0) - (p.valor_entregue_cents||0))/100).toFixed(2) %>
             </td>
             <td data-label="Ações" class="actions">
-              <button class="btn" form="<%= fid %>">Guardar</button>
+              <a class="btn btn-light" href="/peditorios/<%= p.id %>/edit">Editar</a>
               <form method="post"
                     action="/peditorios/<%= p.id %>/delete"
                     onsubmit="return confirm('Apagar este peditório?')"
@@ -80,8 +76,3 @@
     </table>
   </div>
 </div>
-
-<!-- Forms de update (fora da tabela) -->
-<% itens.forEach(p => { const fid = `f-${p.id}`; %>
-  <form id="<%= fid %>" method="post" action="/peditorios/<%= p.id %>"></form>
-<% }) %>
