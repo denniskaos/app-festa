@@ -1,0 +1,24 @@
+<div class="toolbar">
+  <h1>Editar Serviço</h1>
+</div>
+
+<form method="post" action="/orcamento/<%= s.id %>/update" class="card" style="padding:12px">
+  <label>Data
+    <input type="date" name="dt" value="<%= (s.dt || '').slice(0,10) %>" />
+  </label><br>
+
+  <label>Descrição
+    <input type="text" name="descr" value="<%= s.descr || '' %>" required />
+  </label><br>
+
+  <label>Valor (€)
+    <input type="number" step="0.01" name="valor" value="<%= (s.valor_cents/100).toFixed(2) %>" required />
+  </label><br>
+
+  <label>Notas
+    <textarea name="notas"><%= s.notas || '' %></textarea>
+  </label><br>
+
+  <button class="btn">Guardar</button>
+  <a class="btn btn-light" href="/orcamento">Cancelar</a>
+</form>

@@ -18,7 +18,31 @@ router.get('/casais', requireAuth, (req, res, next) => {
       ORDER BY nome COLLATE NOCASE
     `).all();
     const total = casais.reduce((a, c) => a + (c.valor_casa_cents || 0), 0);
-    res.render('casais', { casais, total, euros, user: req.session.user });
+    const {
+      saldoMovimentos,
+      lucroProjetado,
+      saldoProjetado,
+      totalCasais,
+      aplicadoResto,
+      restoTeorico,
+      restoDisponivel,
+    } = loadRodizioResumo();
+
+    res.render('casais', {
+      casais,
+      total,
+      resumo: {
+        saldoMovimentos,
+        lucroProjetado,
+        saldoProjetado,
+        totalCasaCents: totalCasais,
+        aplicadoResto,
+        restoTeorico,
+        restoDisponivel,
+      },
+      euros,
+      user: req.session.user
+    });
   } catch (e) { next(e); }
 });
 
