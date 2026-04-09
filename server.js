@@ -30,6 +30,14 @@ import peditoriosRoutes from './routes/peditorios.js';
 // __dirname em ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const APP_VERSION = (() => {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+    return pkg.version || 'dev';
+  } catch {
+    return 'dev';
+  }
+})();
 
 // ---- APP ----
 const app = express();
@@ -74,6 +82,7 @@ app.set('layout', 'layout');
 app.set('layout extractScripts', true);
 app.set('layout extractStyles', true);
 app.use(expressLayouts);
+app.locals.releaseVersion = APP_VERSION;
 
 // ---- ESTÁTICOS ----
 app.use(

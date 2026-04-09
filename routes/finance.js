@@ -7,6 +7,15 @@ console.log('[finance.js] versão: v-clean-rodizio-pt-2025-10-16');
 
 const router = Router();
 
+function getInt(sql) {
+  try {
+    const row = db.prepare(sql).get();
+    return (row && (row.n ?? row.total ?? 0)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 /* ================= ORÇAMENTO ================= */
 router.get('/orcamento', requireAuth, (req, res, next) => {
   try {
@@ -15,8 +24,50 @@ router.get('/orcamento', requireAuth, (req, res, next) => {
       ORDER BY COALESCE(dt,'9999-99-99'), id
     `).all();
     const total = linhas.reduce((acc, r) => acc + (r.valor_cents || 0), 0);
-    res.render('orcamento', { title:'Orçamento', user:req.session.user, linhas, total, euros });
+
+    const sumRec = getInt(`
+      SELECT COALESCE(SUM(m.valor_cents),0) AS n
+      FROM movimentos m
+      JOIN categorias c ON c.id = m.categoria_id
+      WHERE c.type = 'receita'
+    `);
+    const sumDesp = getInt(`
+      SELECT COALESCE(SUM(m.valor_cents),0) AS n
+      FROM movimentos m
+      JOIN categorias c ON c.id = m.categoria_id
+      WHERE c.type = 'despesa'
+    `);
+    const saldoMov = sumRec - sumDesp;
+    const totalPatrocinadores = getInt(`
+      SELECT COALESCE(SUM(
+        COALESCE(valor_entregue_cents,
+                 CASE WHEN valor_cents IS NOT NULL AND valor_cents > 0 THEN valor_cents ELSE 0 END)
+      ),0) AS n
+      FROM patrocinadores
+    `);
+    const totalPeditorios = getInt(`
+      SELECT COALESCE(SUM(
+        COALESCE(valor_entregue_cents,
+                 CASE WHEN valor_cents IS NOT NULL THEN valor_cents ELSE 0 END)
+      ),0) AS n
+      FROM peditorios
+    `);
+    const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
+    const valorEmFalta = total - saldoFinal;
+
+    res.render('orcamento', {
+      title:'Orçamento',
+      user:req.session.user,
+      linhas,
+      total,
+      saldoFinal,
+      valorEmFalta,
+      euros
+    });
   } catch (e) { next(e); }
+});
+router.get('/orcamento/new', requireAuth, (req, res) => {
+  res.render('orcamento_new', { title: 'Novo Serviço', user: req.session.user });
 });
 router.post('/orcamento', requireAuth, (req, res, next) => {
   try {
@@ -26,7 +77,22 @@ router.post('/orcamento', requireAuth, (req, res, next) => {
     res.redirect('/orcamento');
   } catch (e) { next(e); }
 });
-router.post('/orcamento/:id', requireAuth, (req, res, next) => {
+router.get('/orcamento/:id/edit', requireAuth, (req, res, next) => {
+  try {
+    const s = db.prepare(`
+      SELECT id,
+             COALESCE(dt,'') AS dt,
+             COALESCE(descr,'') AS descr,
+             COALESCE(valor_cents,0) AS valor_cents,
+             COALESCE(notas,'') AS notas
+      FROM orcamento_servicos
+      WHERE id=?
+    `).get(req.params.id);
+    if (!s) return res.status(404).type('text').send('Serviço não encontrado');
+    res.render('orcamento_edit', { title: 'Editar Serviço', user: req.session.user, s, euros });
+  } catch (e) { next(e); }
+});
+router.post('/orcamento/:id/update', requireAuth, (req, res, next) => {
   try {
     const { dt, descr, valor, notas } = req.body;
     db.prepare(`UPDATE orcamento_servicos SET dt=?, descr=?, valor_cents=?, notas=? WHERE id=?`)

@@ -4,14 +4,47 @@
   <a class="btn btn-light" href="/casais/rodizio" style="margin-left:8px">Rodízio</a>
 </div>
 
-<div class="cards" style="margin-bottom:12px;">
+<!-- Layout alinhado com o ecrã de Rodízio das Definições -->
+<div class="cards" style="margin-bottom:12px">
   <div class="card stat">
-    <div class="stat-label">Total</div>
-    <div class="stat-number">€ <%= euros(total) %></div>
+    <div class="stat-label">Saldo movimentos</div>
+    <div class="stat-number">€ <%= euros(resumo.saldoMovimentos) %></div>
+    <div class="muted">receitas − despesas + peditórios + patrocínios</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Lucro projetado (jantares pendentes)</div>
+    <div class="stat-number">€ <%= euros(resumo.lucroProjetado) %></div>
+    <div class="muted">apenas jantares com <code>lancado = 0</code></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Saldo projetado</div>
+    <div class="stat-number">€ <%= euros(resumo.saldoProjetado) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Total em casais</div>
+    <div class="stat-number">€ <%= euros(resumo.totalCasaCents) %></div>
+  </div>
+</div>
+
+<div class="cards" style="margin-bottom:16px">
+  <div class="card stat">
+    <div class="stat-label">Resto teórico</div>
+    <div class="stat-number">€ <%= euros(resumo.restoTeorico) %></div>
+    <div class="muted">não aplicável ainda (inclui projetado)</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Já aplicado do resto</div>
+    <div class="stat-number">€ <%= euros(resumo.aplicadoResto) %></div>
+  </div>
+  <div class="card stat">
+    <div class="stat-label">Resto disponível</div>
+    <div class="stat-number">€ <%= euros(resumo.restoDisponivel) %></div>
+    <div class="muted">disponível para aplicar agora</div>
   </div>
 </div>
 
 <div class="card">
+  <h3 style="margin-top:0">Lista de casais</h3>
   <table class="table">
     <thead>
       <tr><th>Nome</th><th>Valor (€)</th><th style="width:180px">Ações</th></tr>
