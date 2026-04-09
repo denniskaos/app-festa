@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.3]
+### Added
+- Orçamento: nova página de criação de serviço (`/orcamento/new`) com botão **Novo** na listagem.
+- Orçamento: nova página de edição de serviço (`/orcamento/:id/edit`) com ação **Editar** na tabela.
+
+### Changed
+- Orçamento: removida edição inline com botão **Guardar** na tabela, alinhando o fluxo com patrocinadores e peditórios.
+- Orçamento: adicionados indicadores de **Saldo Final** e **Valor em falta** (`total orçamento - saldo final`).
+- Peditórios: consolidação final do fluxo com criação/edição em páginas dedicadas, mantendo totais prometido/entregue/em falta.
+
 ## [1.4.2]
 ### Added
 - Peditórios: nova página de criação com botão **Novo** e campo **Nome da pessoa**.
