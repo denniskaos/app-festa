@@ -9,7 +9,7 @@ const router = Router();
 router.get('/peditorios', requireAuth, (req, res) => {
   const rows = db.prepare(`
     SELECT
-      id, dt, local, equipa,
+      id, dt, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
       COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
       COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
       notas
@@ -42,6 +42,7 @@ router.get('/peditorios/new', requireAuth, (req, res) => {
 // CRIAR
 router.post('/peditorios', requireAuth, (req, res) => {
   const dt = (req.body.dt || null) || null;
+  const nome_pessoa = (req.body.nome_pessoa || '').trim() || null;
   const local  = (req.body.local || '').trim() || null;
   const equipa = (req.body.equipa || '').trim() || null;
   const valor_prometido_cents = cents(req.body.valor_prometido || 0);
@@ -49,9 +50,9 @@ router.post('/peditorios', requireAuth, (req, res) => {
   const notas = (req.body.notas || '').trim() || null;
 
   db.prepare(`
-    INSERT INTO peditorios (dt, local, equipa, valor_cents, valor_prometido_cents, valor_entregue_cents, notas)
-    VALUES (?,?,?,?,?,?,?)
-  `).run(dt, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, notas);
+    INSERT INTO peditorios (dt, nome_pessoa, local, equipa, valor_cents, valor_prometido_cents, valor_entregue_cents, notas)
+    VALUES (?,?,?,?,?,?,?,?)
+  `).run(dt, nome_pessoa, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, notas);
 
   res.redirect('/peditorios');
 });
@@ -60,6 +61,7 @@ router.post('/peditorios', requireAuth, (req, res) => {
 router.post('/peditorios/:id', requireAuth, (req, res) => {
   const id = Number(req.params.id);
   const dt = (req.body.dt || null) || null;
+  const nome_pessoa = (req.body.nome_pessoa || '').trim() || null;
   const local  = (req.body.local || '').trim() || null;
   const equipa = (req.body.equipa || '').trim() || null;
   const valor_prometido_cents = cents(req.body.valor_prometido || 0);
@@ -68,9 +70,9 @@ router.post('/peditorios/:id', requireAuth, (req, res) => {
 
   db.prepare(`
     UPDATE peditorios
-       SET dt=?, local=?, equipa=?, valor_cents=?, valor_prometido_cents=?, valor_entregue_cents=?, notas=?
+       SET dt=?, nome_pessoa=?, local=?, equipa=?, valor_cents=?, valor_prometido_cents=?, valor_entregue_cents=?, notas=?
      WHERE id=?
-  `).run(dt, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, notas, id);
+  `).run(dt, nome_pessoa, local, equipa, valor_entregue_cents, valor_prometido_cents, valor_entregue_cents, notas, id);
 
   res.redirect('/peditorios');
 });

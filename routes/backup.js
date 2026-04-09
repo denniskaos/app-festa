@@ -300,7 +300,7 @@ router.get('/backup/export/peditorios.csv', requireAuth, (_req, res) => {
     .prepare(
       `
     SELECT
-      id, dt, local, equipa,
+      id, dt, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
       COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
       COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
       notas
@@ -309,7 +309,7 @@ router.get('/backup/export/peditorios.csv', requireAuth, (_req, res) => {
     )
     .all();
   const headers = [
-    'id', 'dt', 'local', 'equipa',
+    'id', 'dt', 'nome_pessoa', 'local', 'equipa',
     'valor_prometido_cents', 'valor_prometido_euros',
     'valor_entregue_cents', 'valor_entregue_euros',
     'em_falta_cents', 'em_falta_euros',
@@ -318,6 +318,7 @@ router.get('/backup/export/peditorios.csv', requireAuth, (_req, res) => {
   const data = rows.map((r) => [
     r.id,
     r.dt || '',
+    r.nome_pessoa || '',
     r.local || '',
     r.equipa || '',
     r.valor_prometido_cents ?? 0,
@@ -467,7 +468,7 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
     const rows = db
       .prepare(`
         SELECT
-          id, dt, local, equipa,
+          id, dt, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
           COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
           COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
           notas
@@ -475,7 +476,7 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
       `)
       .all();
     const headers = [
-      'id', 'dt', 'local', 'equipa',
+      'id', 'dt', 'nome_pessoa', 'local', 'equipa',
       'valor_prometido_cents', 'valor_prometido_euros',
       'valor_entregue_cents', 'valor_entregue_euros',
       'em_falta_cents', 'em_falta_euros',
@@ -484,6 +485,7 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
     const data = rows.map((r) => [
       r.id,
       r.dt || '',
+      r.nome_pessoa || '',
       r.local || '',
       r.equipa || '',
       r.valor_prometido_cents ?? 0,
@@ -651,7 +653,7 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
     const rows = db
       .prepare(`
         SELECT
-          id, dt, local, equipa,
+          id, dt, COALESCE(nome_pessoa,'') AS nome_pessoa, local, equipa,
           COALESCE(valor_prometido_cents, valor_cents, 0) AS valor_prometido_cents,
           COALESCE(valor_entregue_cents, valor_cents, 0) AS valor_entregue_cents,
           notas
@@ -659,7 +661,7 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
       `)
       .all();
     const headers = [
-      'id', 'dt', 'local', 'equipa',
+      'id', 'dt', 'nome_pessoa', 'local', 'equipa',
       'valor_prometido_cents', 'valor_prometido_euros',
       'valor_entregue_cents', 'valor_entregue_euros',
       'em_falta_cents', 'em_falta_euros',
@@ -668,6 +670,7 @@ router.get('/backup/export.xlsx', requireAuth, async (_req, res) => {
     const data = rows.map((r) => [
       r.id,
       r.dt || '',
+      r.nome_pessoa || '',
       r.local || '',
       r.equipa || '',
       r.valor_prometido_cents ?? 0,

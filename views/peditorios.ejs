@@ -18,21 +18,6 @@
   </div>
 </div>
 
-<div class="cards" style="margin-bottom:12px;">
-  <div class="card stat">
-    <div class="stat-label">Total Prometido</div>
-    <div class="stat-number">€ <%= (total_valor_prometido_cents/100).toFixed(2) %></div>
-  </div>
-  <div class="card stat">
-    <div class="stat-label">Total Entregue</div>
-    <div class="stat-number">€ <%= (total_valor_entregue_cents/100).toFixed(2) %></div>
-  </div>
-  <div class="card stat">
-    <div class="stat-label">Em Falta</div>
-    <div class="stat-number">€ <%= (total_valor_falta_cents/100).toFixed(2) %></div>
-  </div>
-</div>
-
 <div class="card">
   <h3>Lista</h3>
 
@@ -41,6 +26,7 @@
       <thead>
         <tr>
           <th>Data</th>
+          <th>Pessoa</th>
           <th>Local</th>
           <th>Equipa</th>
           <th>Prometido (€)</th>
@@ -53,7 +39,7 @@
 
       <tbody>
         <% if (!itens.length) { %>
-          <tr><td colspan="8" class="muted">Sem peditórios registados.</td></tr>
+          <tr><td colspan="9" class="muted">Sem peditórios registados.</td></tr>
         <% } %>
 
         <% itens.forEach(p => { const fid = `f-${p.id}`; %>
@@ -62,6 +48,9 @@
               <input type="date" name="dt"
                      value="<%= (p.dt || '').slice(0,10) %>"
                      form="<%= fid %>">
+            </td>
+            <td data-label="Pessoa">
+              <input name="nome_pessoa" value="<%= p.nome_pessoa || '' %>" form="<%= fid %>">
             </td>
             <td data-label="Local">
               <input name="local" value="<%= p.local || '' %>" form="<%= fid %>">
@@ -98,15 +87,6 @@
         <% }) %>
       </tbody>
 
-      <tfoot>
-        <tr>
-          <th colspan="3" style="text-align:right">Total</th>
-          <th>€ <%= (total_valor_prometido_cents/100).toFixed(2) %></th>
-          <th>€ <%= (total_valor_entregue_cents/100).toFixed(2) %></th>
-          <th>€ <%= (total_valor_falta_cents/100).toFixed(2) %></th>
-          <th colspan="2"></th>
-        </tr>
-      </tfoot>
     </table>
   </div>
 </div>
