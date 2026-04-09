@@ -45,6 +45,12 @@ app.disable('x-powered-by');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 const PORT = Number(process.env.PORT || 3000);
+const SESSION_SECRET = process.env.SESSION_SECRET;
+const LOG_REQUESTS = process.env.LOG_REQUESTS === '1' || !IS_PROD;
+
+if (IS_PROD && !SESSION_SECRET) {
+  throw new Error('SESSION_SECRET em falta: define uma variável forte no ambiente de produção.');
+}
 
 // Render está atrás de proxy → cookies e IP corretos
 app.set('trust proxy', 1);
@@ -101,7 +107,7 @@ app.use(express.json());
 const SQLiteStore = SQLiteStoreFactory(session);
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'um-segredo-qualquer',
+    secret: SESSION_SECRET || 'dev-only-secret-change-me',
     resave: false,
     saveUninitialized: false,
     store: new SQLiteStore({
@@ -123,11 +129,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- LOG SIMPLES ----
-app.use((req, _res, next) => {
-  console.log('[REQ]', req.method, req.url);
-  next();
-});
+// ---- LOG DE REQUESTS (ativo por defeito em dev; opcional em prod com LOG_REQUESTS=1) ----
+if (LOG_REQUESTS) {
+  app.use((req, _res, next) => {
+    console.log('[REQ]', req.method, req.url);
+    next();
+  });
+}
 
 // ---- HEALTHCHECK (Render) ----
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
