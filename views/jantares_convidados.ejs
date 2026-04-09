@@ -2,6 +2,10 @@
 <div class="toolbar">
   <h1>Convidados — <%= j.title || j.dt || ('Jantar #' + j.id) %></h1>
   <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+    <form method="post" action="/jantares/<%= j.id %>/convidados/presenca/todos"
+          onsubmit="return confirm('Confirmar presença de todos os convidados?')">
+      <button class="btn btn-light" type="submit">Selecionar todos</button>
+    </form>
     <a class="btn" href="<%= urls.mesas %>">Mesas</a>
     <a class="btn" href="<%= urls.despesas %>">Despesas</a>
     <a class="btn btn-light" href="<%= urls.base %>">Voltar</a>

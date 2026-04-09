@@ -57,8 +57,14 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     FROM patrocinadores
   `);
 
-  // Peditórios
-  const totalPeditorios = getInt(`SELECT COALESCE(SUM(valor_cents),0) AS n FROM peditorios`);
+  // Peditórios (usa valor_entregue_cents se existir; senão valor_cents)
+  const totalPeditorios = getInt(`
+    SELECT COALESCE(SUM(
+      COALESCE(valor_entregue_cents,
+               CASE WHEN valor_cents IS NOT NULL THEN valor_cents ELSE 0 END)
+    ),0) AS n
+    FROM peditorios
+  `);
 
   // Saldo final = Patrocínios + Peditórios + Saldo dos Movimentos
   const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
@@ -78,4 +84,3 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
 });
 
 export default router;
-
