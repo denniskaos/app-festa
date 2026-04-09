@@ -77,7 +77,22 @@ router.post('/orcamento', requireAuth, (req, res, next) => {
     res.redirect('/orcamento');
   } catch (e) { next(e); }
 });
-router.post('/orcamento/:id', requireAuth, (req, res, next) => {
+router.get('/orcamento/:id/edit', requireAuth, (req, res, next) => {
+  try {
+    const s = db.prepare(`
+      SELECT id,
+             COALESCE(dt,'') AS dt,
+             COALESCE(descr,'') AS descr,
+             COALESCE(valor_cents,0) AS valor_cents,
+             COALESCE(notas,'') AS notas
+      FROM orcamento_servicos
+      WHERE id=?
+    `).get(req.params.id);
+    if (!s) return res.status(404).type('text').send('Serviço não encontrado');
+    res.render('orcamento_edit', { title: 'Editar Serviço', user: req.session.user, s, euros });
+  } catch (e) { next(e); }
+});
+router.post('/orcamento/:id/update', requireAuth, (req, res, next) => {
   try {
     const { dt, descr, valor, notas } = req.body;
     db.prepare(`UPDATE orcamento_servicos SET dt=?, descr=?, valor_cents=?, notas=? WHERE id=?`)
