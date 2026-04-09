@@ -1,6 +1,7 @@
+<% const bp = basePath || '/definicoes/rodizio'; %>
 <div class="toolbar">
   <h1>Rodízio</h1>
-  <a class="btn btn-light" style="margin-left:auto" href="/definicoes">Voltar</a>
+  <a class="btn btn-light" style="margin-left:auto" href="/casais">Voltar</a>
 </div>
 
 <% if (err) { %>
@@ -56,7 +57,7 @@
     Resto disponível atual: <b>€ <%= euros(resumo.restoDisponivel) %></b>
   </div>
 
-  <form method="post" action="/definicoes/rodizio/aplicar" class="form-grid">
+  <form method="post" action="<%= bp %>/aplicar" class="form-grid">
     <label>Casal
       <select name="casal_id" required>
         <option value="">(escolher casal)</option>
@@ -81,7 +82,7 @@
 <!-- ====== Definições do rodízio ====== -->
 <div class="card" style="margin-bottom:16px">
   <h3 style="margin-top:0">Definições do rodízio</h3>
-  <form method="post" action="/definicoes/rodizio" class="form-grid">
+  <form method="post" action="<%= bp %>" class="form-grid">
     <label>Valor por bloco (€)
       <input type="text" name="bloco"
              value="<%= ( (settings.rodizio_bloco_cents||0)/100 ).toFixed(2).replace('.', ',') %>" />
@@ -126,14 +127,14 @@
             <td><%= h.casal_nome %></td>
             <td>€ <%= euros(h.valor_cents) %></td>
             <td>
-              <form method="post" action="/definicoes/rodizio/edit/<%= h.id %>" style="display:inline-flex; gap:8px; align-items:center">
+              <form method="post" action="<%= bp %>/edit/<%= h.id %>" style="display:inline-flex; gap:8px; align-items:center">
                 <input name="valor" type="number" step="0.01" min="0"
                        value="<%= (h.valor_cents/100).toFixed(2) %>"
                        style="width:110px" />
                 <button class="btn btn-light" type="submit">Atualizar</button>
               </form>
 
-              <form method="post" action="/definicoes/rodizio/delete/<%= h.id %>" style="display:inline">
+              <form method="post" action="<%= bp %>/delete/<%= h.id %>" style="display:inline">
                 <button class="btn btn-danger" onclick="return confirm('Apagar aplicação?')">Apagar</button>
               </form>
             </td>
