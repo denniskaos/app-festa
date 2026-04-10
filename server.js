@@ -52,6 +52,7 @@ const PORT = Number(process.env.PORT || 3000);
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const LOG_REQUESTS = process.env.LOG_REQUESTS === '1' || !IS_PROD;
 const STRICT_SESSION_SECRET = process.env.STRICT_SESSION_SECRET === '1';
+const STRICT_CSRF = process.env.STRICT_CSRF === '1';
 
 // Render está atrás de proxy → cookies e IP corretos
 app.set('trust proxy', 1);
@@ -172,6 +173,15 @@ app.use((req, res, next) => {
 
   const validToken = verifyCsrfToken(req);
   if (validToken) return next();
+
+  if (STRICT_CSRF) {
+    logger.warn('csrf token missing (strict mode)', {
+      requestId: req.requestId,
+      method,
+      url: req.originalUrl,
+    });
+    return res.status(403).send('Pedido bloqueado: token CSRF em falta ou inválido.');
+  }
 
   const isSameOrigin = sameOriginGuard(req, { strict: false });
   if (!isSameOrigin) {
@@ -461,4 +471,5 @@ app.use((err, _req, res, _next) => {
 app.listen(PORT, '0.0.0.0', () => {
   const url = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
   logger.info('server started', { url, dbPath: DB_PATH, sessionsDb: SESSIONS_DB });
+  logger.info('security mode', { strictCsrf: STRICT_CSRF, strictSessionSecret: STRICT_SESSION_SECRET });
 });
