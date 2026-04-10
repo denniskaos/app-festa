@@ -68,6 +68,10 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
 
   // Saldo final = Patrocínios + Peditórios + Saldo dos Movimentos
   const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
+<<<<<<< codex/identify-application-improvement-areas-pqdku3
+  const desvioOrcamento = saldoFinal - orcamentoTotal;
+  const execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
+=======
   const caixaTotal = saldoFinal + totalCasa;
   const desvioOrcamento = saldoFinal - orcamentoTotal;
   const execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
@@ -93,6 +97,7 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
       ...r,
       pct: r.planned_cents > 0 ? (r.actual_cents / r.planned_cents) * 100 : null,
     }));
+>>>>>>> main
 
   res.render('dashboard', {
     title: 'Painel',
@@ -105,10 +110,15 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     totalPatrocinadores,
     totalPeditorios,
     saldoFinal,
+<<<<<<< codex/identify-application-improvement-areas-pqdku3
+    desvioOrcamento,
+    execucaoOrcamentoPct,
+=======
     caixaTotal,
     desvioOrcamento,
     execucaoOrcamentoPct,
     topDesvios,
+>>>>>>> main
   });
 });
 
