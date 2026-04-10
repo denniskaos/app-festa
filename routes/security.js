@@ -30,12 +30,22 @@ router.get('/seguranca/audit', requireAuth, requireRole('admin'), (_req, res) =>
     ORDER BY id DESC
     LIMIT @limit
   `).all(params);
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) AS total_24h,
+      SUM(CASE WHEN event='login_success' THEN 1 ELSE 0 END) AS success_24h,
+      SUM(CASE WHEN event='login_bad_password' THEN 1 ELSE 0 END) AS bad_password_24h,
+      SUM(CASE WHEN event='login_rate_limited' THEN 1 ELSE 0 END) AS rate_limited_24h
+    FROM auth_audit
+    WHERE datetime(dt) >= datetime('now','-1 day')
+  `).get();
 
   res.render('security_audit', {
     title: 'Auditoria de Segurança',
     rows,
     filters: { event, q, limit },
     msg: _req.query.msg || null,
+    stats,
   });
 });
 

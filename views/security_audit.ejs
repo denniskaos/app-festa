@@ -1,6 +1,12 @@
 <section class="card">
   <h1>Auditoria de Segurança</h1>
   <p class="muted">Últimos 200 eventos de autenticação.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0 12px;">
+    <article class="card"><strong>Total (24h)</strong><div><%= stats?.total_24h || 0 %></div></article>
+    <article class="card"><strong>Login OK (24h)</strong><div><%= stats?.success_24h || 0 %></div></article>
+    <article class="card"><strong>Password errada (24h)</strong><div><%= stats?.bad_password_24h || 0 %></div></article>
+    <article class="card"><strong>Rate-limited (24h)</strong><div><%= stats?.rate_limited_24h || 0 %></div></article>
+  </div>
   <% if (msg) { %><p class="ok"><%= msg %></p><% } %>
   <form class="inline" method="get" action="/seguranca/audit" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:10px 0 14px;">
     <div>

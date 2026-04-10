@@ -29,3 +29,4 @@ Export CSV:
 - Admin pode consultar os eventos em `/seguranca/audit`.
 - Audit suporta filtros (`event`, `q`, `limit`) e export CSV em `/seguranca/audit.csv`.
 - Página de audit inclui ação de purga por retenção em dias (`/seguranca/audit/purge`).
+- Página de audit mostra KPIs de segurança das últimas 24h.
