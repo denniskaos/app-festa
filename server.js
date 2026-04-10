@@ -8,11 +8,14 @@ import SQLiteStoreFactory from 'connect-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { createHash } from 'crypto';
+import { randomUUID } from 'crypto';
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 
 // Middleware
 import { readOnlyForViewers } from './middleware/roles.js';
+import { ensureCsrfToken, sameOriginGuard, verifyCsrfToken } from './lib/security.js';
+import { logger } from './lib/logger.js';
 
 // Rotas
 import authRoutes from './routes/auth.js';
@@ -27,6 +30,7 @@ import financeRoutes from './routes/finance.js';
 import importRoutes from './routes/import.js';
 import backupRoutes from './routes/backup.js';
 import peditoriosRoutes from './routes/peditorios.js';
+import securityRoutes from './routes/security.js';
 
 // __dirname em ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +53,7 @@ const PORT = Number(process.env.PORT || 3000);
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const LOG_REQUESTS = process.env.LOG_REQUESTS === '1' || !IS_PROD;
 const STRICT_SESSION_SECRET = process.env.STRICT_SESSION_SECRET === '1';
+const STRICT_CSRF = process.env.STRICT_CSRF === '1';
 
 // Render está atrás de proxy → cookies e IP corretos
 app.set('trust proxy', 1);
@@ -69,7 +74,7 @@ const EFFECTIVE_SESSION_SECRET = SESSION_SECRET || FALLBACK_SESSION_SECRET;
 if (IS_PROD && !SESSION_SECRET) {
   const msg = 'SESSION_SECRET em falta: usar fallback temporário (define SESSION_SECRET no Render).';
   if (STRICT_SESSION_SECRET) throw new Error(`${msg} (STRICT_SESSION_SECRET=1)`);
-  console.warn(`[security] ${msg}`);
+  logger.warn('session secret missing', { detail: msg });
 }
 
 // Em Render (DATABASE_PATH presente) → /data/sessions.sqlite
@@ -116,6 +121,12 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+app.use((req, res, next) => {
+  req.requestId = randomUUID();
+  res.set('X-Request-ID', req.requestId);
+  next();
+});
+
 // ---- SESSÃO (persistente) ----
 const SQLiteStore = SQLiteStoreFactory(session);
 app.use(
@@ -139,16 +150,52 @@ app.use(
 // ---- USER DISPONÍVEL NAS VIEWS ----
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
+  res.locals.csrfToken = ensureCsrfToken(req);
   next();
 });
 
 // ---- LOG DE REQUESTS (ativo por defeito em dev; opcional em prod com LOG_REQUESTS=1) ----
 if (LOG_REQUESTS) {
   app.use((req, _res, next) => {
-    console.log('[REQ]', req.method, req.url);
+    logger.info('request', {
+      requestId: req.requestId,
+      method: req.method,
+      url: req.originalUrl,
+      ip: req.ip,
+      userId: req.session?.user?.id || null,
+    });
     next();
   });
 }
+
+app.use((req, res, next) => {
+  const method = String(req.method || 'GET').toUpperCase();
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return next();
+
+  const validToken = verifyCsrfToken(req);
+  if (validToken) return next();
+
+  if (STRICT_CSRF) {
+    logger.warn('csrf token missing (strict mode)', {
+      requestId: req.requestId,
+      method,
+      url: req.originalUrl,
+    });
+    return res.status(403).send('Pedido bloqueado: token CSRF em falta ou inválido.');
+  }
+
+  const isSameOrigin = sameOriginGuard(req, { strict: false });
+  if (!isSameOrigin) {
+    logger.warn('csrf blocked request', { requestId: req.requestId, method, url: req.originalUrl });
+    return res.status(403).send('Pedido bloqueado por validação CSRF.');
+  }
+  logger.warn('csrf token missing; allowed by same-origin fallback', {
+    requestId: req.requestId,
+    method,
+    url: req.originalUrl,
+  });
+  return next();
+});
 
 // ---- HEALTHCHECK (Render) ----
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
@@ -244,9 +291,9 @@ app.get('/readyz', (_req, res) => {
     dbi.exec(`CREATE UNIQUE INDEX IF NOT EXISTS categorias_name_type_unique ON categorias(name, type);`);
     dbi.close();
 
-    console.log('[boot-fix++] categorias: limpeza + verificação concluída');
+    logger.info('boot-fix categorias ok');
   } catch (e) {
-    console.warn('[boot-fix++] categorias: falhou:', e.message);
+    logger.warn('boot-fix categorias failed', { error: e.message });
   }
 })();
 
@@ -381,9 +428,9 @@ app.get('/readyz', (_req, res) => {
     }
 
     dbi.close();
-    console.log('[boot-schema] Base criada/validada');
+    logger.info('boot-schema ok');
   } catch (e) {
-    console.warn('[boot-schema] falhou:', e.message);
+    logger.warn('boot-schema failed', { error: e.message });
   }
 })();
 
@@ -406,6 +453,7 @@ app.use('/', financeRoutes);       // /orcamento, /movimentos, /patrocinadores
 app.use('/', importRoutes);        // /import
 app.use('/', backupRoutes);        // /backup
 app.use('/', peditoriosRoutes);    // /peditorios
+app.use('/', securityRoutes);      // /seguranca/audit
 
 // ---- RAIZ -> PAINEL ----
 app.get('/', (_req, res) => res.redirect('/dashboard'));
@@ -417,14 +465,13 @@ app.use((req, res) => {
 
 // ---- ERROS ----
 app.use((err, _req, res, _next) => {
-  console.error('❌ Unhandled error:', err);
+  logger.error('unhandled error', { error: err?.message || String(err) });
   res.status(500).type('text').send('500 Internal Server Error');
 });
 
 // ---- ARRANCAR ----
 app.listen(PORT, '0.0.0.0', () => {
   const url = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
-  console.log(`✅ Servidor a correr em ${url}`);
-  console.log(`📦 SQLite em: ${DB_PATH}`);
-  console.log(`🔐 Sessions DB: ${SESSIONS_DB}`);
+  logger.info('server started', { url, dbPath: DB_PATH, sessionsDb: SESSIONS_DB });
+  logger.info('security mode', { strictCsrf: STRICT_CSRF, strictSessionSecret: STRICT_SESSION_SECRET });
 });
