@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url';
 import { readOnlyForViewers } from './middleware/roles.js';
 import { ensureCsrfToken, sameOriginGuard, verifyCsrfToken } from './lib/security.js';
 import { logger } from './lib/logger.js';
+import { purgeAuthAuditOlderThan } from './lib/audit.js';
 
 // Rotas
 import authRoutes from './routes/auth.js';
@@ -54,6 +55,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET;
 const LOG_REQUESTS = process.env.LOG_REQUESTS === '1' || !IS_PROD;
 const STRICT_SESSION_SECRET = process.env.STRICT_SESSION_SECRET === '1';
 const STRICT_CSRF = process.env.STRICT_CSRF === '1';
+const AUTH_AUDIT_RETENTION_DAYS = Math.max(1, Number(process.env.AUTH_AUDIT_RETENTION_DAYS || 180));
 
 // Render está atrás de proxy → cookies e IP corretos
 app.set('trust proxy', 1);
@@ -296,6 +298,17 @@ app.get('/readyz', (_req, res) => {
     logger.warn('boot-fix categorias failed', { error: e.message });
   }
 })();
+
+// Purga de retenção de auditoria (arranque)
+try {
+  const removed = purgeAuthAuditOlderThan(AUTH_AUDIT_RETENTION_DAYS);
+  logger.info('auth_audit retention purge', {
+    days: AUTH_AUDIT_RETENTION_DAYS,
+    removed,
+  });
+} catch (e) {
+  logger.warn('auth_audit retention purge failed', { error: e.message });
+}
 
 /* ===== BOOT-SCHEMA: garantir tabelas base e seeds mínimos ===== */
 (() => {

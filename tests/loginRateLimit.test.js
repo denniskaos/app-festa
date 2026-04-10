@@ -7,7 +7,6 @@ import {
   loginRateLimit,
 } from '../middleware/loginRateLimit.js';
 
-
 function mockReq(email = 'teste@example.com', ip = '127.0.0.1') {
   return {
     body: { email },
@@ -76,4 +75,3 @@ test('clearLoginRateLimitByEmail removes rows regardless of ip', () => {
   const rows = db.prepare('SELECT k FROM login_attempts ORDER BY k').all().map(r => r.k);
   assert.deepEqual(rows, ['3.3.3.3:other@x.pt']);
 });
-

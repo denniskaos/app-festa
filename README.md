@@ -31,5 +31,4 @@ Export CSV:
 - Página de audit inclui ação de purga por retenção em dias (`/seguranca/audit/purge`).
 - Página de audit mostra KPIs de segurança das últimas 24h.
 - Admin pode desbloquear tentativas de login por email em `/seguranca/unlock`.
-- Admin pode desbloquear tentativas de login por email em `/seguranca/unlock`.
-
+- Retenção automática de auditoria no arranque: `AUTH_AUDIT_RETENTION_DAYS` (default: 180).
