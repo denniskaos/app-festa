@@ -1,6 +1,22 @@
 <section class="card">
   <h1>Auditoria de Segurança</h1>
   <p class="muted">Últimos 200 eventos de autenticação.</p>
+  <form class="inline" method="get" action="/seguranca/audit" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:10px 0 14px;">
+    <div>
+      <label for="event">Evento</label><br />
+      <input id="event" name="event" value="<%= filters?.event || '' %>" />
+    </div>
+    <div>
+      <label for="q">Pesquisa</label><br />
+      <input id="q" name="q" value="<%= filters?.q || '' %>" placeholder="email, ip, meta" />
+    </div>
+    <div>
+      <label for="limit">Limite</label><br />
+      <input id="limit" type="number" min="1" max="1000" name="limit" value="<%= filters?.limit || 200 %>" />
+    </div>
+    <button type="submit" class="btn">Filtrar</button>
+    <a class="btn btn-light" href="/seguranca/audit.csv?limit=<%= filters?.limit || 200 %>">Exportar CSV</a>
+  </form>
 
   <div class="table-wrap">
     <table class="table">
@@ -32,4 +48,3 @@
     </table>
   </div>
 </section>
-

@@ -27,3 +27,4 @@ Export CSV:
 - Para bloquear qualquer POST sem token, ativa `STRICT_CSRF=1`.
 - Eventos de autenticação são registados em `auth_audit` (sucesso, falha, rate-limit, logout).
 - Admin pode consultar os eventos em `/seguranca/audit`.
+- Audit suporta filtros (`event`, `q`, `limit`) e export CSV em `/seguranca/audit.csv`.
