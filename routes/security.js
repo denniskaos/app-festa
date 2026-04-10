@@ -3,6 +3,7 @@ import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireRole } from '../middleware/roles.js';
 import { purgeAuthAuditOlderThan } from '../lib/audit.js';
+import { clearLoginRateLimitByEmail } from '../middleware/loginRateLimit.js';
 
 const router = Router();
 
@@ -73,6 +74,12 @@ router.post('/seguranca/audit/purge', requireAuth, requireRole('admin'), (req, r
   const days = Math.max(1, Math.min(3650, Number(req.body.days || 90)));
   const removed = purgeAuthAuditOlderThan(days);
   res.redirect(`/seguranca/audit?msg=${encodeURIComponent(`Removidos ${removed} registos (> ${days} dias).`)}`);
+});
+
+router.post('/seguranca/unlock', requireAuth, requireRole('admin'), (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const removed = clearLoginRateLimitByEmail(email);
+  res.redirect(`/seguranca/audit?msg=${encodeURIComponent(`Unlock ${email || '(vazio)'}: ${removed} bloqueios removidos.`)}`);
 });
 
 export default router;
