@@ -1,5 +1,31 @@
 // 1) “Tabela → cartões” no mobile: injeta data-label com o texto do <th>
 document.addEventListener('DOMContentLoaded', () => {
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  // 0) CSRF: injeta token em todos os formulários de escrita
+  document.querySelectorAll('form[method]').forEach(form => {
+    const method = String(form.getAttribute('method') || 'get').toUpperCase();
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return;
+
+    let input = form.querySelector('input[name="_csrf"]');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = '_csrf';
+      form.appendChild(input);
+    }
+    input.value = csrfToken;
+  });
+
+  // CSRF também em fetch() (caso exista JS que poste dados)
+  if (csrfToken && typeof window.fetch === 'function') {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+      const opts = { ...init, headers: { ...(init.headers || {}), 'x-csrf-token': csrfToken } };
+      return originalFetch(input, opts);
+    };
+  }
+
   document.querySelectorAll('table.table').forEach(table => {
     const heads = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
     table.querySelectorAll('tbody tr').forEach(tr => {
