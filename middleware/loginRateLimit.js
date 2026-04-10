@@ -60,6 +60,7 @@ export function loginRateLimit(req, res, next) {
 export function clearLoginRateLimit(req) {
   db.prepare('DELETE FROM login_attempts WHERE k=?').run(keyFor(req));
 }
+<<<<<<< codex/identify-application-improvement-areas-ohbtvp
 
 export function clearLoginRateLimitByEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -70,3 +71,5 @@ export function clearLoginRateLimitByEmail(email) {
   `).run(normalized);
   return Number(info.changes || 0);
 }
+=======
+>>>>>>> main
