@@ -28,6 +28,10 @@
     <div class="stat-number"><strong>€ <%= (saldoFinal/100).toFixed(2) %></strong></div>
     <div class="stat-label"><strong>Saldo Final</strong></div>
   </div>
+  <div class="card stat">
+    <div class="stat-number"><strong>€ <%= (caixaTotal/100).toFixed(2) %></strong></div>
+    <div class="stat-label"><strong>Caixa Total (Saldo + Em Casa)</strong></div>
+  </div>
 
   <div class="card stat">
     <div class="stat-number">€ <%= (orcamentoTotal/100).toFixed(2) %></div>
@@ -46,3 +50,39 @@
     <div class="stat-label">Execução de Despesa vs Orçamento</div>
   </div>
 </div>
+<<<<<<< codex/identify-application-improvement-areas-pqdku3
+=======
+
+<section class="card" style="margin-top:14px;">
+  <h3>Top desvios por categoria</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Categoria</th>
+          <th>Tipo</th>
+          <th>Planeado (€)</th>
+          <th>Real (€)</th>
+          <th>Desvio (€)</th>
+          <th>Execução</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!topDesvios || !topDesvios.length) { %>
+          <tr><td colspan="6">Sem dados.</td></tr>
+        <% } %>
+        <% (topDesvios || []).forEach(r => { %>
+          <tr>
+            <td><%= r.name %></td>
+            <td><%= r.type %></td>
+            <td><%= (r.planned_cents/100).toFixed(2) %></td>
+            <td><%= (r.actual_cents/100).toFixed(2) %></td>
+            <td><%= (r.delta_cents/100).toFixed(2) %></td>
+            <td><%= r.pct == null ? '-' : (r.pct.toFixed(1) + '%') %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+>>>>>>> main
