@@ -30,6 +30,7 @@ import financeRoutes from './routes/finance.js';
 import importRoutes from './routes/import.js';
 import backupRoutes from './routes/backup.js';
 import peditoriosRoutes from './routes/peditorios.js';
+import securityRoutes from './routes/security.js';
 
 // __dirname em ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -452,6 +453,7 @@ app.use('/', financeRoutes);       // /orcamento, /movimentos, /patrocinadores
 app.use('/', importRoutes);        // /import
 app.use('/', backupRoutes);        // /backup
 app.use('/', peditoriosRoutes);    // /peditorios
+app.use('/', securityRoutes);      // /seguranca/audit
 
 // ---- RAIZ -> PAINEL ----
 app.get('/', (_req, res) => res.redirect('/dashboard'));
