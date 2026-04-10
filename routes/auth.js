@@ -2,6 +2,9 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../db.js';
+import { rotateCsrfToken, validatePasswordStrength } from '../lib/security.js';
+import { clearLoginRateLimit, loginRateLimit } from '../middleware/loginRateLimit.js';
+import { logger } from '../lib/logger.js';
 
 const router = Router();
 
@@ -20,15 +23,24 @@ router.use(['/login', '/registar'], (_req, res, next) => {
    ========================================= */
 (function ensureAdmin() {
   try {
-    const row = db.prepare('SELECT id FROM users WHERE email=?').get('admin@local');
+    const bootstrapPassword = String(process.env.ADMIN_BOOTSTRAP_PASSWORD || '');
+    if (!bootstrapPassword) return;
+
+    const email = String(process.env.ADMIN_BOOTSTRAP_EMAIL || 'admin@local').trim().toLowerCase();
+    const row = db.prepare('SELECT id FROM users WHERE email=?').get(email);
     if (!row) {
-      const hash = bcrypt.hashSync('admin123', 10);
+      const strong = validatePasswordStrength(bootstrapPassword);
+      if (!strong.ok) {
+        logger.warn('admin bootstrap skipped (weak password)', { email });
+        return;
+      }
+      const hash = bcrypt.hashSync(bootstrapPassword, 10);
       db.prepare('INSERT INTO users (name,email,password_hash,role) VALUES (?,?,?,?)')
-        .run('Administrador', 'admin@local', hash, 'admin');
-      console.log('✔ Utilizador admin criado: admin@local / admin123');
+        .run('Administrador', email, hash, 'admin');
+      logger.info('admin bootstrap created', { email });
     }
   } catch (e) {
-    console.warn('ensureAdmin falhou:', e.message);
+    logger.warn('ensureAdmin failed', { error: e.message });
   }
 })();
 
@@ -40,7 +52,7 @@ router.get('/login', (req, res) => {
   res.render('login', { title: 'Entrar', error: null });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', loginRateLimit, (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
 
@@ -58,7 +70,9 @@ router.post('/login', (req, res) => {
     return res.render('login', { title: 'Entrar', error: 'Credenciais inválidas' });
   }
 
+  clearLoginRateLimit(req);
   req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role || 'viewer' };
+  rotateCsrfToken(req);
   res.redirect('/dashboard');
 });
 
@@ -97,6 +111,10 @@ router.post('/registar', (req, res) => {
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     return res.render('register', { title: 'Criar conta', error: 'Email inválido.' });
   }
+  const strong = validatePasswordStrength(password);
+  if (!strong.ok) {
+    return res.render('register', { title: 'Criar conta', error: strong.message });
+  }
 
   const exists = db.prepare('SELECT id FROM users WHERE email=?').get(email);
   if (exists) {
@@ -112,6 +130,7 @@ router.post('/registar', (req, res) => {
                  .run(name, email, hash, role);
 
   req.session.user = { id: info.lastInsertRowid, name, email, role };
+  rotateCsrfToken(req);
   res.redirect('/dashboard');
 });
 
