@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireRole } from '../middleware/roles.js';
+import { validatePasswordStrength } from '../lib/security.js';
 
 const router = Router();
 
@@ -21,7 +22,9 @@ router.get('/utilizadores', requireAuth, requireRole('admin'), (req, res) => {
 /* CRIAR (admin) */
 router.post('/utilizadores', requireAuth, requireRole('admin'), (req, res) => {
   const { name, email, role, password } = req.body;
-  const hash = bcrypt.hashSync(password || '123456', 10);
+  const strong = validatePasswordStrength(password);
+  if (!strong.ok) return res.status(400).send(strong.message);
+  const hash = bcrypt.hashSync(password, 10);
   db.prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?,?,?,?)')
     .run((name||'').trim(), (email||'').trim().toLowerCase(), hash, role || 'viewer');
   res.redirect('/utilizadores');
@@ -38,7 +41,9 @@ router.post('/utilizadores/:id/role', requireAuth, requireRole('admin'), (req, r
 /* RESET PASSWORD (admin) */
 router.post('/utilizadores/:id/reset', requireAuth, requireRole('admin'), (req, res) => {
   const id = Number(req.params.id);
-  const hash = bcrypt.hashSync((req.body.password || '123456'), 10);
+  const strong = validatePasswordStrength(req.body.password);
+  if (!strong.ok) return res.status(400).send(strong.message);
+  const hash = bcrypt.hashSync(req.body.password, 10);
   db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, id);
   res.redirect('/utilizadores');
 });
@@ -52,4 +57,3 @@ router.post('/utilizadores/:id/delete', requireAuth, requireRole('admin'), (req,
 });
 
 export default router;
-
