@@ -28,6 +28,10 @@
     <div class="stat-number"><strong>€ <%= (saldoFinal/100).toFixed(2) %></strong></div>
     <div class="stat-label"><strong>Saldo Final</strong></div>
   </div>
+  <div class="card stat">
+    <div class="stat-number"><strong>€ <%= (caixaTotal/100).toFixed(2) %></strong></div>
+    <div class="stat-label"><strong>Caixa Total (Saldo + Em Casa)</strong></div>
+  </div>
 
   <div class="card stat">
     <div class="stat-number">€ <%= (orcamentoTotal/100).toFixed(2) %></div>
@@ -46,3 +50,4 @@
     <div class="stat-label">Execução de Despesa vs Orçamento</div>
   </div>
 </div>
+

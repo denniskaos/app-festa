@@ -70,6 +70,9 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
   const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
   const desvioOrcamento = saldoFinal - orcamentoTotal;
   const execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
+  const desvioOrcamento = saldoFinal - orcamentoTotal;
+  const execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
+
 
   res.render('dashboard', {
     title: 'Painel',
@@ -82,6 +85,8 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     totalPatrocinadores,
     totalPeditorios,
     saldoFinal,
+    desvioOrcamento,
+    execucaoOrcamentoPct,
     desvioOrcamento,
     execucaoOrcamentoPct,
   });
