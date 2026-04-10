@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { ensureSettingsRow } from '../lib/settings.js';
+import { validatePasswordStrength } from '../lib/security.js';
 
 const router = Router();
 
@@ -77,6 +78,8 @@ router.post('/definicoes/perfil', requireAuth, (req, res) => {
       return res.redirect('/definicoes?err=Password+atual+incorreta');
     if (!new_password || new_password !== confirm_password)
       return res.redirect('/definicoes?err=Password+nova+não+confere');
+    const strong = validatePasswordStrength(new_password);
+    if (!strong.ok) return res.redirect('/definicoes?err=Password+fraca');
 
     const hash = bcrypt.hashSync(new_password, 10);
     db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hash, req.session.user.id);
