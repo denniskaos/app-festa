@@ -25,3 +25,4 @@ Export CSV:
 - CSRF token é renovado no login/registo para reduzir risco de reutilização de sessão.
 - Limite de tentativas de login é persistido na base de dados (sobrevive a restart).
 - Para bloquear qualquer POST sem token, ativa `STRICT_CSRF=1`.
+- Eventos de autenticação são registados em `auth_audit` (sucesso, falha, rate-limit, logout).

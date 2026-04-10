@@ -5,6 +5,7 @@ import db from '../db.js';
 import { rotateCsrfToken, validatePasswordStrength } from '../lib/security.js';
 import { clearLoginRateLimit, loginRateLimit } from '../middleware/loginRateLimit.js';
 import { logger } from '../lib/logger.js';
+import { logAuthEvent } from '../lib/audit.js';
 
 const router = Router();
 
@@ -55,24 +56,29 @@ router.get('/login', (req, res) => {
 router.post('/login', loginRateLimit, (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
   if (!email || !password) {
+    logAuthEvent({ event: 'login_invalid_input', email, ip });
     return res.render('login', { title: 'Entrar', error: 'Preenche email e palavra-passe.' });
   }
 
   const user = db.prepare('SELECT * FROM users WHERE email=?').get(email);
   if (!user) {
+    logAuthEvent({ event: 'login_user_not_found', email, ip });
     return res.render('login', { title: 'Entrar', error: 'Credenciais inválidas' });
   }
 
   const ok = bcrypt.compareSync(password, user.password_hash);
   if (!ok) {
+    logAuthEvent({ event: 'login_bad_password', email, ip, meta: { userId: user.id } });
     return res.render('login', { title: 'Entrar', error: 'Credenciais inválidas' });
   }
 
   clearLoginRateLimit(req);
   req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role || 'viewer' };
   rotateCsrfToken(req);
+  logAuthEvent({ event: 'login_success', email, ip, meta: { userId: user.id } });
   res.redirect('/dashboard');
 });
 
@@ -80,6 +86,9 @@ router.post('/login', loginRateLimit, (req, res) => {
    Logout
    ========================================= */
 router.post('/logout', (req, res) => {
+  const email = req.session?.user?.email || null;
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  logAuthEvent({ event: 'logout', email, ip });
   req.session.destroy(() => {
     res.clearCookie('connect.sid'); // limpa cookie da sessão
     res.redirect('/login');

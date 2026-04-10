@@ -1,4 +1,5 @@
 import db from '../db.js';
+import { logAuthEvent } from '../lib/audit.js';
 
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 10;
@@ -43,6 +44,12 @@ export function loginRateLimit(req, res, next) {
 
   if (count > MAX_ATTEMPTS) {
     const waitSec = Math.ceil((WINDOW_MS - (now - windowStart)) / 1000);
+    logAuthEvent({
+      event: 'login_rate_limited',
+      email: String(req.body?.email || '').trim().toLowerCase(),
+      ip: req.ip || req.socket?.remoteAddress || 'unknown',
+      meta: { waitSec, count },
+    });
     return res
       .status(429)
       .render('login', { title: 'Entrar', error: `Muitas tentativas. Tenta novamente em ${waitSec}s.` });
