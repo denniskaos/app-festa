@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 
 // Middleware
 import { readOnlyForViewers } from './middleware/roles.js';
-import { sameOriginGuard } from './lib/security.js';
+import { ensureCsrfToken, sameOriginGuard, verifyCsrfToken } from './lib/security.js';
 import { logger } from './lib/logger.js';
 
 // Rotas
@@ -148,6 +148,7 @@ app.use(
 // ---- USER DISPONÍVEL NAS VIEWS ----
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
+  res.locals.csrfToken = ensureCsrfToken(req);
   next();
 });
 
@@ -169,11 +170,19 @@ app.use((req, res, next) => {
   const method = String(req.method || 'GET').toUpperCase();
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return next();
 
-  const isValid = sameOriginGuard(req, { strict: false });
-  if (!isValid) {
+  const validToken = verifyCsrfToken(req);
+  if (validToken) return next();
+
+  const isSameOrigin = sameOriginGuard(req, { strict: false });
+  if (!isSameOrigin) {
     logger.warn('csrf blocked request', { requestId: req.requestId, method, url: req.originalUrl });
     return res.status(403).send('Pedido bloqueado por validação CSRF.');
   }
+  logger.warn('csrf token missing; allowed by same-origin fallback', {
+    requestId: req.requestId,
+    method,
+    url: req.originalUrl,
+  });
   return next();
 });
 

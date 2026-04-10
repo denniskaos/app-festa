@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sameOriginGuard, validatePasswordStrength } from '../lib/security.js';
+import { ensureCsrfToken, sameOriginGuard, validatePasswordStrength, verifyCsrfToken } from '../lib/security.js';
 
 test('validatePasswordStrength accepts strong password', () => {
   const out = validatePasswordStrength('Festa2026!');
@@ -58,4 +58,30 @@ test('sameOriginGuard rejects cross-site by fetch metadata', () => {
     },
   };
   assert.equal(sameOriginGuard(req, { strict: false }), false);
+});
+
+test('ensureCsrfToken creates and reuses session token', () => {
+  const req = { session: {} };
+  const a = ensureCsrfToken(req);
+  const b = ensureCsrfToken(req);
+  assert.ok(a);
+  assert.equal(a, b);
+});
+
+test('verifyCsrfToken validates matching token from body', () => {
+  const req = {
+    session: { csrfToken: 'abc123' },
+    body: { _csrf: 'abc123' },
+    get() { return ''; },
+  };
+  assert.equal(verifyCsrfToken(req), true);
+});
+
+test('verifyCsrfToken rejects invalid token', () => {
+  const req = {
+    session: { csrfToken: 'abc123' },
+    body: { _csrf: 'x' },
+    get() { return ''; },
+  };
+  assert.equal(verifyCsrfToken(req), false);
 });
