@@ -37,5 +37,12 @@
     <div class="stat-number">€ <%= (totalCasa/100).toFixed(2) %></div>
     <div class="stat-label">Em casa (casais)</div>
   </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (desvioOrcamento/100).toFixed(2) %></div>
+    <div class="stat-label">Desvio vs Orçamento</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number"><%= execucaoOrcamentoPct.toFixed(1) %>%</div>
+    <div class="stat-label">Execução de Despesa vs Orçamento</div>
+  </div>
 </div>
-
