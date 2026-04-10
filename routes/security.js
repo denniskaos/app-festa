@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireRole } from '../middleware/roles.js';
+import { purgeAuthAuditOlderThan } from '../lib/audit.js';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.get('/seguranca/audit', requireAuth, requireRole('admin'), (_req, res) =>
     title: 'Auditoria de Segurança',
     rows,
     filters: { event, q, limit },
+    msg: _req.query.msg || null,
   });
 });
 
@@ -55,6 +57,12 @@ router.get('/seguranca/audit.csv', requireAuth, requireRole('admin'), (_req, res
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="auth_audit.csv"');
   res.send(csv);
+});
+
+router.post('/seguranca/audit/purge', requireAuth, requireRole('admin'), (req, res) => {
+  const days = Math.max(1, Math.min(3650, Number(req.body.days || 90)));
+  const removed = purgeAuthAuditOlderThan(days);
+  res.redirect(`/seguranca/audit?msg=${encodeURIComponent(`Removidos ${removed} registos (> ${days} dias).`)}`);
 });
 
 export default router;

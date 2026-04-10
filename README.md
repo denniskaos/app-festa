@@ -28,3 +28,4 @@ Export CSV:
 - Eventos de autenticação são registados em `auth_audit` (sucesso, falha, rate-limit, logout).
 - Admin pode consultar os eventos em `/seguranca/audit`.
 - Audit suporta filtros (`event`, `q`, `limit`) e export CSV em `/seguranca/audit.csv`.
+- Página de audit inclui ação de purga por retenção em dias (`/seguranca/audit/purge`).
