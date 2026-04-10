@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db from '../db.js';
-import { validatePasswordStrength } from '../lib/security.js';
+import { rotateCsrfToken, validatePasswordStrength } from '../lib/security.js';
 import { clearLoginRateLimit, loginRateLimit } from '../middleware/loginRateLimit.js';
 import { logger } from '../lib/logger.js';
 
@@ -72,6 +72,7 @@ router.post('/login', loginRateLimit, (req, res) => {
 
   clearLoginRateLimit(req);
   req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role || 'viewer' };
+  rotateCsrfToken(req);
   res.redirect('/dashboard');
 });
 
@@ -129,6 +130,7 @@ router.post('/registar', (req, res) => {
                  .run(name, email, hash, role);
 
   req.session.user = { id: info.lastInsertRowid, name, email, role };
+  rotateCsrfToken(req);
   res.redirect('/dashboard');
 });
 

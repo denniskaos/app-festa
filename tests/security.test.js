@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ensureCsrfToken, sameOriginGuard, validatePasswordStrength, verifyCsrfToken } from '../lib/security.js';
+import {
+  ensureCsrfToken,
+  rotateCsrfToken,
+  sameOriginGuard,
+  validatePasswordStrength,
+  verifyCsrfToken,
+} from '../lib/security.js';
 
 test('validatePasswordStrength accepts strong password', () => {
   const out = validatePasswordStrength('Festa2026!');
@@ -66,6 +72,14 @@ test('ensureCsrfToken creates and reuses session token', () => {
   const b = ensureCsrfToken(req);
   assert.ok(a);
   assert.equal(a, b);
+});
+
+test('rotateCsrfToken replaces existing token', () => {
+  const req = { session: {} };
+  const before = ensureCsrfToken(req);
+  const after = rotateCsrfToken(req);
+  assert.ok(after);
+  assert.notEqual(before, after);
 });
 
 test('verifyCsrfToken validates matching token from body', () => {
