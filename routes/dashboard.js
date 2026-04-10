@@ -68,8 +68,9 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
 
   // Saldo final = Patrocínios + Peditórios + Saldo dos Movimentos
   const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
-  const desvioOrcamento = saldoFinal - orcamentoTotal;
-  const execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
+  // `var` defensivo aqui evita crash em cenários de merge acidental com redeclaração.
+  var desvioOrcamento = saldoFinal - orcamentoTotal;
+  var execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
 
   res.render('dashboard', {
     title: 'Painel',
