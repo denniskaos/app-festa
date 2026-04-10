@@ -22,3 +22,4 @@ Export CSV:
 - Passwords devem ter pelo menos 10 caracteres, com maiúsculas, minúsculas, número e símbolo.
 - Não há passwords por omissão para novos utilizadores.
 - CSRF token é injetado automaticamente nos formulários (com fallback same-origin para compatibilidade).
+- Limite de tentativas de login é persistido na base de dados (sobrevive a restart).

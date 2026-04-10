@@ -1,6 +1,15 @@
+import db from '../db.js';
+
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 10;
-const ATTEMPTS = new Map();
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS login_attempts (
+    k TEXT PRIMARY KEY,
+    count INTEGER NOT NULL DEFAULT 0,
+    window_start_ms INTEGER NOT NULL
+  )
+`);
 
 function keyFor(req) {
   const email = String(req.body?.email || '').trim().toLowerCase();
@@ -8,26 +17,32 @@ function keyFor(req) {
   return `${ip}:${email}`;
 }
 
-function cleanup(now) {
-  for (const [k, v] of ATTEMPTS.entries()) {
-    if (now - v.firstSeen > WINDOW_MS) ATTEMPTS.delete(k);
-  }
-}
-
 export function loginRateLimit(req, res, next) {
   const now = Date.now();
-  cleanup(now);
   const key = keyFor(req);
-  const entry = ATTEMPTS.get(key) || { count: 0, firstSeen: now };
-  if (now - entry.firstSeen > WINDOW_MS) {
-    entry.count = 0;
-    entry.firstSeen = now;
-  }
-  entry.count += 1;
-  ATTEMPTS.set(key, entry);
+  db.prepare('DELETE FROM login_attempts WHERE window_start_ms < ?').run(now - WINDOW_MS * 12);
 
-  if (entry.count > MAX_ATTEMPTS) {
-    const waitSec = Math.ceil((WINDOW_MS - (now - entry.firstSeen)) / 1000);
+  const row = db.prepare('SELECT count, window_start_ms FROM login_attempts WHERE k=?').get(key);
+  let count = 1;
+  let windowStart = now;
+
+  if (row) {
+    const elapsed = now - Number(row.window_start_ms || 0);
+    if (elapsed <= WINDOW_MS) {
+      count = Number(row.count || 0) + 1;
+      windowStart = Number(row.window_start_ms || now);
+    }
+  }
+  db.prepare(`
+    INSERT INTO login_attempts (k, count, window_start_ms)
+    VALUES (?, ?, ?)
+    ON CONFLICT(k) DO UPDATE SET
+      count = excluded.count,
+      window_start_ms = excluded.window_start_ms
+  `).run(key, count, windowStart);
+
+  if (count > MAX_ATTEMPTS) {
+    const waitSec = Math.ceil((WINDOW_MS - (now - windowStart)) / 1000);
     return res
       .status(429)
       .render('login', { title: 'Entrar', error: `Muitas tentativas. Tenta novamente em ${waitSec}s.` });
@@ -36,6 +51,5 @@ export function loginRateLimit(req, res, next) {
 }
 
 export function clearLoginRateLimit(req) {
-  ATTEMPTS.delete(keyFor(req));
+  db.prepare('DELETE FROM login_attempts WHERE k=?').run(keyFor(req));
 }
-
