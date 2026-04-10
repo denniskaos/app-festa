@@ -1,15 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import db from '../db.js';
-<<<<<<< codex/identify-application-improvement-areas-ohbtvp
 import {
   clearLoginRateLimit,
   clearLoginRateLimitByEmail,
   loginRateLimit,
 } from '../middleware/loginRateLimit.js';
-=======
-import { clearLoginRateLimit, loginRateLimit } from '../middleware/loginRateLimit.js';
->>>>>>> main
+
 
 function mockReq(email = 'teste@example.com', ip = '127.0.0.1') {
   return {
@@ -68,7 +65,6 @@ test('clearLoginRateLimit removes throttle state', () => {
   assert.equal(afterClear.statusCode, 200);
 });
 
-<<<<<<< codex/identify-application-improvement-areas-ohbtvp
 test('clearLoginRateLimitByEmail removes rows regardless of ip', () => {
   db.prepare('DELETE FROM login_attempts').run();
   db.prepare(`INSERT INTO login_attempts (k, count, window_start_ms) VALUES ('1.1.1.1:mail@x.pt', 12, ?), ('2.2.2.2:mail@x.pt', 9, ?), ('3.3.3.3:other@x.pt', 5, ?)`)
@@ -80,5 +76,4 @@ test('clearLoginRateLimitByEmail removes rows regardless of ip', () => {
   const rows = db.prepare('SELECT k FROM login_attempts ORDER BY k').all().map(r => r.k);
   assert.deepEqual(rows, ['3.3.3.3:other@x.pt']);
 });
-=======
->>>>>>> main
+
