@@ -169,7 +169,7 @@ app.use((req, res, next) => {
   const method = String(req.method || 'GET').toUpperCase();
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return next();
 
-  const isValid = sameOriginGuard(req, { strict: IS_PROD });
+  const isValid = sameOriginGuard(req, { strict: false });
   if (!isValid) {
     logger.warn('csrf blocked request', { requestId: req.requestId, method, url: req.originalUrl });
     return res.status(403).send('Pedido bloqueado por validação CSRF.');
