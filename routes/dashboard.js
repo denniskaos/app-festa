@@ -68,6 +68,31 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
 
   // Saldo final = Patrocínios + Peditórios + Saldo dos Movimentos
   const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
+  const caixaTotal = saldoFinal + totalCasa;
+  const desvioOrcamento = saldoFinal - orcamentoTotal;
+  const execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
+
+  const topDesvios = db
+    .prepare(
+      `
+    SELECT
+      c.name,
+      c.type,
+      COALESCE(c.planned_cents, 0) AS planned_cents,
+      COALESCE(SUM(m.valor_cents), 0) AS actual_cents,
+      COALESCE(SUM(m.valor_cents), 0) - COALESCE(c.planned_cents, 0) AS delta_cents
+    FROM categorias c
+    LEFT JOIN movimentos m ON m.categoria_id = c.id
+    GROUP BY c.id, c.name, c.type, c.planned_cents
+    ORDER BY ABS(delta_cents) DESC, c.name
+    LIMIT 8
+  `
+    )
+    .all()
+    .map((r) => ({
+      ...r,
+      pct: r.planned_cents > 0 ? (r.actual_cents / r.planned_cents) * 100 : null,
+    }));
 
   res.render('dashboard', {
     title: 'Painel',
@@ -79,7 +104,11 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     totalCasa,
     totalPatrocinadores,
     totalPeditorios,
-    saldoFinal
+    saldoFinal,
+    caixaTotal,
+    desvioOrcamento,
+    execucaoOrcamentoPct,
+    topDesvios,
   });
 });
 

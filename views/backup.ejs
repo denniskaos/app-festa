@@ -1,6 +1,7 @@
 <!-- views/backup.ejs -->
 <%
   const csvMap = {
+    events: '/backup/export/events.csv',
     movimentos: '/backup/export/movimentos.csv',
     jantares: '/backup/export/jantares.csv',
     orcamento_servicos: '/backup/export/orcamento.csv',
@@ -50,6 +51,7 @@
         <p class="muted">Exportação rápida por módulo da aplicação.</p>
       </header>
       <div class="btn-grid">
+        <a class="btn btn-light" href="/backup/export/events.csv">Cronograma</a>
         <a class="btn btn-light" href="/backup/export/movimentos.csv">Movimentos</a>
         <a class="btn btn-light" href="/backup/export/jantares.csv">Jantares</a>
         <a class="btn btn-light" href="/backup/export/orcamento.csv">Orçamento</a>
