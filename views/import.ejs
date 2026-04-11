@@ -1,10 +1,10 @@
 <div class="toolbar"><h1>Importar Cronograma</h1></div>
 <section class="card">
-  <form method="post" action="/events/import" enctype="multipart/form-data" class="form-grid">
+  <form method="post" action="/import" enctype="multipart/form-data" class="form-grid">
     <label style="grid-column:1/-1">Ficheiro
       <input type="file" name="file" accept=".csv,.txt" required />
     </label>
-    <button type="submit" class="btn">Importar</button>
+    <button type="submit" class="btn">Analisar ficheiro</button>
   </form>
   <p class="muted">Formato: <code>dt;title</code> (cabeçalho opcional). Data em <code>YYYY-MM-DD</code> ou <code>DD/MM/YYYY</code>.</p>
 
@@ -15,3 +15,53 @@
     <p class="mt alert"><%= err %></p>
   <% } %>
 </section>
+
+<% if (preview) { %>
+  <section class="card">
+    <h2>Preview: <%= preview.fileName || 'ficheiro' %></h2>
+    <p class="muted">
+      Linhas lidas: <strong><%= preview.totalRows %></strong> ·
+      Válidas: <strong><%= preview.prepared.length %></strong> ·
+      Com erro: <strong><%= preview.errors.length %></strong>
+    </p>
+
+    <form method="post" action="/import/confirm" style="margin:10px 0 16px;">
+      <button type="submit" class="btn">Confirmar importação</button>
+    </form>
+
+    <h3>Primeiras linhas válidas</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Data</th><th>Título</th><th>Local</th></tr></thead>
+        <tbody>
+          <% (preview.prepared || []).slice(0, 25).forEach(r => { %>
+            <tr>
+              <td><%= r.dt %></td>
+              <td><%= r.title %></td>
+              <td><%= r.location || '-' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (preview.errors && preview.errors.length) { %>
+      <h3>Erros encontrados (primeiros 25)</h3>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Linha</th><th>Motivo</th><th>Data raw</th><th>Título raw</th></tr></thead>
+          <tbody>
+            <% preview.errors.slice(0,25).forEach(e => { %>
+              <tr>
+                <td><%= e.row %></td>
+                <td><%= e.reason %></td>
+                <td><%= e.rawDate %></td>
+                <td><%= e.rawTitle %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
