@@ -68,6 +68,8 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
 
   // Saldo final = Patrocínios + Peditórios + Saldo dos Movimentos
   const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
+  // Compatibilidade com templates de dashboard antigos ainda em cache/deploy.
+  const caixaTotal = saldoFinal + totalCasa;
   // Compatibilidade com templates antigos que esperam a tabela "Top desvios".
   const topDesvios = [];
   // `var` defensivo aqui evita crash em cenários de merge acidental com redeclaração.
@@ -85,6 +87,7 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     totalPatrocinadores,
     totalPeditorios,
     saldoFinal,
+    caixaTotal,
     desvioOrcamento,
     execucaoOrcamentoPct,
     topDesvios,
