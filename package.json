@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js",
-    "test": "node --check server.js && node --check db.js && node --check routes/*.js && node --check lib/*.js",
+    "dev": "node scripts/check-conflicts.mjs && node --check server.js && node --check routes/*.js && node --check lib/*.js && nodemon server.js",
+    "start": "node scripts/check-conflicts.mjs && node --check server.js && node --check routes/*.js && node --check lib/*.js && node server.js",
+    "test": "node --check server.js && node --check db.js && node --check routes/*.js && node --check lib/*.js && node scripts/check-conflicts.mjs && node --test tests/*.test.js",
     "build": "echo \"no build step\"",
     "postinstall": "npm rebuild better-sqlite3 || true"
   },
