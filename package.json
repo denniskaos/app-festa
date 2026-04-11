@@ -2,6 +2,7 @@
   "name": "festa-aldeia-app",
   "version": "1.4.5",
   "private": true,
+  "packageManager": "npm@10.8.2",
   "type": "module",
   "scripts": {
     "dev": "node scripts/check-conflicts.mjs && node --check server.js && node --check routes/*.js && node --check lib/*.js && nodemon server.js",
