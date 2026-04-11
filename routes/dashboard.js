@@ -68,6 +68,10 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
 
   // Saldo final = Patrocínios + Peditórios + Saldo dos Movimentos
   const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
+  // Compatibilidade com templates antigos do dashboard que ainda referenciem este KPI.
+  const caixaTotal = saldoFinal + totalCasa;
+  // Compatibilidade com templates antigos que esperam a tabela "Top desvios".
+  const topDesvios = [];
   // `var` defensivo aqui evita crash em cenários de merge acidental com redeclaração.
   var desvioOrcamento = saldoFinal - orcamentoTotal;
   var execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
@@ -83,8 +87,10 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     totalPatrocinadores,
     totalPeditorios,
     saldoFinal,
+    caixaTotal,
     desvioOrcamento,
     execucaoOrcamentoPct,
+    topDesvios,
   });
 });
 
