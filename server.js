@@ -200,7 +200,13 @@ app.use((req, res, next) => {
 });
 
 // ---- HEALTHCHECK (Render) ----
-app.get('/healthz', (_req, res) => res.type('text').send('ok'));
+app.get(['/health', '/healthz'], (_req, res) => res.type('text').send('ok'));
+app.head(['/', '/health', '/healthz'], (_req, res) => res.status(200).end());
+app.get('/', (req, res, next) => {
+  const ua = String(req.get('user-agent') || '').toLowerCase();
+  if (!req.session?.user && ua.includes('render')) return res.type('text').send('ok');
+  return next();
+});
 
 // ---- READINESS com verificação à DB ----
 app.get('/readyz', (_req, res) => {
