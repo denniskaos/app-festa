@@ -153,6 +153,9 @@ app.use(
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.csrfToken = ensureCsrfToken(req);
+  // Guard rails para evitar 500 por templates antigos/stale em deploy.
+  if (typeof res.locals.caixaTotal === 'undefined') res.locals.caixaTotal = 0;
+  if (typeof res.locals.topDesvios === 'undefined') res.locals.topDesvios = [];
   next();
 });
 
