@@ -242,6 +242,21 @@ router.get('/backup/export/jantares.csv', requireAuth, (_req, res) => {
   sendCsv(res, `jantares-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
 });
 
+router.get('/backup/export/events.csv', requireAuth, (_req, res) => {
+  const rows = db
+    .prepare(
+      `
+    SELECT id, dt, title, location, notes
+    FROM events
+    ORDER BY date(dt) DESC, id DESC
+  `
+    )
+    .all();
+  const headers = ['ID', 'Data', 'Título', 'Local', 'Notas'];
+  const data = rows.map((r) => [r.id, r.dt || '', r.title || '', r.location || '', r.notes || '']);
+  sendCsv(res, `events-${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
+});
+
 router.get('/backup/export/orcamento.csv', requireAuth, (_req, res) => {
   const rows = db
     .prepare(
@@ -396,6 +411,21 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
       eurosFromCents(r.despesas_cents),
     ]);
     addCsv('jantares.csv', headers, data);
+  }
+  // events
+  {
+    const rows = db
+      .prepare(
+        `
+      SELECT id, dt, title, location, notes
+      FROM events
+      ORDER BY date(dt) DESC, id DESC
+    `
+      )
+      .all();
+    const headers = ['ID', 'Data', 'Título', 'Local', 'Notas'];
+    const data = rows.map((r) => [r.id, r.dt || '', r.title || '', r.location || '', r.notes || '']);
+    addCsv('events.csv', headers, data);
   }
   // orcamento
   {
