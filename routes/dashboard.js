@@ -68,6 +68,11 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
 
   // Saldo final = Patrocínios + Peditórios + Saldo dos Movimentos
   const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
+  // Compatibilidade com templates antigos que esperam a tabela "Top desvios".
+  const topDesvios = [];
+  // `var` defensivo aqui evita crash em cenários de merge acidental com redeclaração.
+  var desvioOrcamento = saldoFinal - orcamentoTotal;
+  var execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
 
   res.render('dashboard', {
     title: 'Painel',
@@ -79,7 +84,10 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     totalCasa,
     totalPatrocinadores,
     totalPeditorios,
-    saldoFinal
+    saldoFinal,
+    desvioOrcamento,
+    execucaoOrcamentoPct,
+    topDesvios,
   });
 });
 
