@@ -24,6 +24,7 @@ Export CSV:
 - CSRF token é injetado automaticamente nos formulários (com fallback same-origin para compatibilidade).
 - CSRF token é renovado no login/registo para reduzir risco de reutilização de sessão.
 - Limite de tentativas de login é persistido na base de dados (sobrevive a restart).
+- Recuperação de password disponível em `/password/forgot` com link temporário para `/password/reset`.
 - Para bloquear qualquer POST sem token, ativa `STRICT_CSRF=1`.
 - Eventos de autenticação são registados em `auth_audit` (sucesso, falha, rate-limit, logout).
 - Admin pode consultar os eventos em `/seguranca/audit`.

@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Segurança: auditoria de autenticação persistente com interface administrativa (`/seguranca/audit`) para listar/exportar/purgar eventos e desbloquear tentativas por email.
 - Segurança: limitação persistente de tentativas de login (SQLite) e testes automáticos dedicados para segurança/auditoria/rate-limit.
+- Segurança: recuperação de password via "Esqueci-me da password" (`/password/forgot` e `/password/reset`) com token temporário.
 - Importação: novo fluxo de importação CSV de eventos com preview + confirmação (`/import` e `/import/confirm`) e relatório de erros por linha.
 - Backup/exportação: exportação `events.csv` e inclusão do cronograma no ZIP de todos os CSV.
 

@@ -411,6 +411,19 @@ try {
         role TEXT
       );
 
+      /* Password reset tokens */
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token_hash TEXT NOT NULL UNIQUE,
+        expires_at TEXT NOT NULL,
+        used_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_password_resets_user_id ON password_resets(user_id);
+      CREATE INDEX IF NOT EXISTS idx_password_resets_expires_at ON password_resets(expires_at);
+
       /* Settings (linha fixa id=1) */
       CREATE TABLE IF NOT EXISTS settings (
         id INTEGER PRIMARY KEY CHECK (id=1),
