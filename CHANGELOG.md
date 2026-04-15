@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.6]
+### Added
+- Segurança: auditoria de autenticação persistente com interface administrativa (`/seguranca/audit`) para listar/exportar/purgar eventos e desbloquear tentativas por email.
+- Segurança: limitação persistente de tentativas de login (SQLite) e testes automáticos dedicados para segurança/auditoria/rate-limit.
+- Segurança: recuperação de password via "Esqueci-me da password" (`/password/forgot` e `/password/reset`) com token temporário.
+- Importação: novo fluxo de importação CSV de eventos com preview + confirmação (`/import` e `/import/confirm`) e relatório de erros por linha.
+- Backup/exportação: exportação `events.csv` e inclusão do cronograma no ZIP de todos os CSV.
+
+### Changed
+- Segurança: proteção CSRF com token por sessão, rotação após autenticação e modo estrito opcional por `STRICT_CSRF=1`.
+- Operação: logs estruturados com `requestId`, purga automática de retenção de auditoria no arranque e checks de pré-arranque (`check-conflicts` + `node --check`).
+- Qualidade: testes automáticos expandidos (unitários + integração de registo/dashboard) e validações de password forte em registo/gestão de utilizadores.
+
+### Fixed
+- Deploy: mitigação de falhas de build em ambientes que executam Yarn por omissão através de configuração `.yarnrc` (registry/timeout).
+
 ## [1.4.5]
 ### Fixed
 - Sessões em produção: removido bloqueio de arranque quando `SESSION_SECRET` não está definido; a aplicação passa a usar um fallback determinístico e emitir aviso.

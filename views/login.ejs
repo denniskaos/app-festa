@@ -1,6 +1,7 @@
 <section class="card">
   <h1>Entrar</h1>
   <% if (error) { %><div class="alert"><%= error %></div><% } %>
+  <% if (msg) { %><div class="alert success"><%= msg %></div><% } %>
  <form method="post" action="/login" autocomplete="off" novalidate>
   <!-- armadilhas pro autofill teimoso -->
   <input type="text" name="fake-username" autocomplete="username"
@@ -18,5 +19,6 @@
   <button class="btn btn-primary">Entrar</button>
 </form>
 
+  <p class="mt"><a href="/password/forgot">Esqueci-me da password</a></p>
   <p class="mt">Ainda não tens conta? <a href="/registar">Criar conta</a></p>
 </section>
