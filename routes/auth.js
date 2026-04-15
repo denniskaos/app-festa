@@ -123,7 +123,9 @@ router.get('/password/forgot', (req, res) => {
 router.post('/password/forgot', (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-  const genericMsg = 'Se o email existir, enviámos instruções para recuperar a password.';
+  const genericMsg = process.env.NODE_ENV === 'production'
+    ? 'Se o email existir, o pedido foi registado. Contacta a administração para concluir a recuperação.'
+    : 'Se o email existir, foi gerado um link temporário de recuperação.';
 
   if (!email) {
     return res.render('forgot_password', {
@@ -154,7 +156,11 @@ router.post('/password/forgot', (req, res) => {
   const resetLink = `${req.protocol}://${req.get('host')}/password/reset?token=${encodeURIComponent(token)}`;
 
   logAuthEvent({ event: 'password_reset_requested', email, ip, meta: { userId: user.id } });
-  logger.info('password reset link generated', { email, resetLink });
+  logger.info('password reset link generated', {
+    email,
+    resetLink,
+    deliveryMode: process.env.NODE_ENV === 'production' ? 'admin/manual' : 'dev-link',
+  });
 
   return res.render('forgot_password', {
     title: 'Recuperar password',
