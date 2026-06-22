@@ -2,9 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1]
+### Fixed
+- Corrige o número de leilões da festa de quatro para três.
+
+### Changed
+- O Painel passa a incluir leilões recebidos e os totais vendido, pago e em falta dos lugares.
+- O atalho de navegação “Venda de lugares” passa a chamar-se apenas “Lugares”.
+
 ## [1.5.0]
 ### Added
-- Página de Leilões com quatro registos fixos, data, valor recebido e total acumulado.
+- Página de Leilões com três registos fixos, data, valor recebido e total acumulado.
 - Página de Venda de Lugares com comprador, lugar, valor total, valor pago e cálculo automático do valor em falta.
 - Validação para impedir pagamentos acima do valor da venda e a venda duplicada do mesmo lugar.
 

@@ -377,9 +377,9 @@ try {
         valor_entregue_cents INTEGER NOT NULL DEFAULT 0
       );
 
-      /* Leilões (quatro momentos da festa) */
+      /* Leilões (três momentos da festa) */
       CREATE TABLE IF NOT EXISTS leiloes (
-        numero INTEGER PRIMARY KEY CHECK (numero BETWEEN 1 AND 4),
+        numero INTEGER PRIMARY KEY CHECK (numero BETWEEN 1 AND 3),
         dt TEXT,
         valor_recebido_cents INTEGER NOT NULL DEFAULT 0 CHECK (valor_recebido_cents >= 0)
       );
@@ -485,8 +485,9 @@ try {
     insCat.run('Genérico', 'receita');
     insCat.run('Genérico', 'despesa');
 
+    dbi.prepare(`DELETE FROM leiloes WHERE numero > 3`).run();
     const insLeilao = dbi.prepare(`INSERT OR IGNORE INTO leiloes (numero) VALUES (?)`);
-    for (let numero = 1; numero <= 4; numero += 1) insLeilao.run(numero);
+    for (let numero = 1; numero <= 3; numero += 1) insLeilao.run(numero);
 
     const rowSet = dbi.prepare(`SELECT 1 FROM settings WHERE id=1`).get();
     if (!rowSet) {

@@ -32,6 +32,7 @@ function listLeiloes() {
     SELECT numero, COALESCE(dt, '') AS dt,
            COALESCE(valor_recebido_cents, 0) AS valor_recebido_cents
     FROM leiloes
+    WHERE numero BETWEEN 1 AND 3
     ORDER BY numero
   `).all();
 }
@@ -54,7 +55,7 @@ router.post('/leiloes/:numero', requireAuth, (req, res, next) => {
     const dt = cleanText(req.body.dt, 10);
     const valorRecebido = parseEuroValue(req.body.valor_recebido);
 
-    if (!Number.isInteger(numero) || numero < 1 || numero > 4) {
+    if (!Number.isInteger(numero) || numero < 1 || numero > 3) {
       return res.status(404).type('text').send('Leilão não encontrado.');
     }
     if (!validDate(dt) || valorRecebido === null) {
