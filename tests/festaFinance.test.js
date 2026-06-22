@@ -121,7 +121,7 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(dashboardHtml.includes('€ 163.45'));
     assert.ok(dashboardHtml.includes('€ 500.00'));
     assert.equal(dashboardHtml.includes('€ 663.45'), false);
-    assert.equal(dashboardHtml.includes('Caixa Total (Saldo + Em Casa)'), false);
+    assert.equal(dashboardHtml.includes('Caixa Total'), false);
 
     const duplicate = await fetch(`${baseUrl}/lugares`, {
       method: 'POST',

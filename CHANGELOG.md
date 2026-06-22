@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.4]
+### Changed
+- Remove o indicador redundante “Caixa Total” do Painel, mantendo apenas o “Saldo Final”.
+
 ## [1.5.3]
 ### Fixed
 - O Caixa Total deixa de somar o valor “Em Casa”, evitando contabilizar o mesmo dinheiro duas vezes.

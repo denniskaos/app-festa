@@ -81,8 +81,6 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
 
   // Saldo final inclui apenas dinheiro efetivamente recebido.
   const saldoFinal = totalPatrocinadores + totalPeditorios + totalLeiloes + totalLugaresPago + saldoMov;
-  // O valor distribuído pelos casais já pertence a este saldo; somá-lo duplicaria o caixa.
-  const caixaTotal = saldoFinal;
   // Compatibilidade com templates antigos que esperam a tabela "Top desvios".
   const topDesvios = [];
   // `var` defensivo aqui evita crash em cenários de merge acidental com redeclaração.
@@ -102,7 +100,6 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     totalLeiloes,
     totalLugaresPago,
     saldoFinal,
-    caixaTotal,
     desvioOrcamento,
     execucaoOrcamentoPct,
     topDesvios,
