@@ -29,20 +29,67 @@ function formatMoney(cents) {
   }).format((Number(cents) || 0) / 100);
 }
 
-function movementGroups(type) {
+function normalize(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function movementRows(type) {
   return db.prepare(`
-    SELECT c.name AS descricao, COALESCE(SUM(m.valor_cents), 0) AS valor_cents
+    SELECT COALESCE(c.name, '') AS categoria,
+           COALESCE(m.descr, '') AS descricao,
+           COALESCE(m.valor_cents, 0) AS valor_cents
     FROM movimentos m
     JOIN categorias c ON c.id = m.categoria_id
     WHERE c.type = ?
-    GROUP BY c.id, c.name
-    ORDER BY c.name COLLATE NOCASE
-  `).all(type).map((row) => ({
-    descricao: row.descricao === 'Genérico'
-      ? (type === 'receita' ? 'Outras receitas' : 'Outras despesas')
-      : row.descricao,
-    valor_cents: Number(row.valor_cents || 0),
-  }));
+    ORDER BY m.id
+  `).all(type).map((row) => ({ ...row, valor_cents: Number(row.valor_cents || 0) }));
+}
+
+function rowText(row) {
+  return normalize(`${row.categoria || ''} ${row.descricao || ''}`);
+}
+
+function sumByKey(rows, classify) {
+  return rows.reduce((totals, row) => {
+    const key = classify(row);
+    totals[key] = (totals[key] || 0) + row.valor_cents;
+    return totals;
+  }, {});
+}
+
+function receiptKey(row) {
+  const text = rowText(row);
+  if (text.includes('sabado') && text.includes('bombo')) return 'sabadoBombos';
+  if (text.includes('rifa') || text.includes('malha')) return 'rifasMalhas';
+  return 'bar';
+}
+
+function budgetKey(row) {
+  const text = normalize(row.descricao);
+  if (text.includes('palco') || text.includes('gerador') || text.includes('vigilante')) return 'palco';
+  if (text.includes('som') && text.includes('rua')) return 'somRua';
+  if (text.includes('som') && (text.includes('luz') || text.includes('iluminacao'))) return 'somLuz';
+  if (text.includes('artista')) return 'artistas';
+  if (/\bdj\b/.test(text) || text.includes('djs')) return 'djs';
+  if (text.includes('bombo')) return 'bombos';
+  if (text.includes('camarim')) return 'camarins';
+  if (text.includes('estadia') || text.includes('alojamento') || text.includes('hotel')) return 'estadias';
+  if (text.includes('iluminacao')) return 'iluminacao';
+  if (text.includes('banda')) return 'bandaMusica';
+  if (text.includes('rancho')) return 'ranchos';
+  if (text.includes('procissao') || text.includes('procisao')) return 'procissao';
+  return 'bar';
+}
+
+function movementExpenseKey(row) {
+  const text = rowText(row);
+  if (text.includes('jantar') || text.includes('almoco') || text.includes('refeicao')) return 'jantares';
+  return 'bar';
 }
 
 router.get('/resumo-final', requireAuth, (req, res, next) => {
@@ -63,18 +110,37 @@ router.get('/resumo-final', requireAuth, (req, res, next) => {
       SELECT COALESCE(SUM(valor_pago_cents), 0) AS n FROM vendas_lugares
     `);
 
-    const receitasMovimentos = movementGroups('receita');
-    const despesasMovimentos = movementGroups('despesa');
+    const receitas = sumByKey(movementRows('receita'), receiptKey);
+    const despesasMovimentos = sumByKey(movementRows('despesa'), movementExpenseKey);
+    const despesasOrcamento = sumByKey(db.prepare(`
+      SELECT COALESCE(descr, '') AS descricao, COALESCE(valor_cents, 0) AS valor_cents
+      FROM orcamento_servicos ORDER BY id
+    `).all().map((row) => ({ ...row, valor_cents: Number(row.valor_cents || 0) })), budgetKey);
     const entradas = [
-      { descricao: 'Donativos da população (Peditórios)', valor_cents: totalPeditorios },
+      { descricao: 'Peditórios', valor_cents: totalPeditorios },
       { descricao: 'Patrocínios', valor_cents: totalPatrocinadores },
+      { descricao: 'Bar', valor_cents: receitas.bar || 0 },
+      { descricao: 'Sábado Bombos', valor_cents: receitas.sabadoBombos || 0 },
+      { descricao: 'Rifas/Malhas', valor_cents: receitas.rifasMalhas || 0 },
       { descricao: 'Leilões de prendas', valor_cents: totalLeiloes },
       { descricao: 'Venda de lugares', valor_cents: totalLugares },
-      ...receitasMovimentos,
     ];
-    const saidas = despesasMovimentos.length
-      ? despesasMovimentos
-      : [{ descricao: 'Despesas registadas', valor_cents: 0 }];
+    const saidas = [
+      { descricao: 'Artistas', valor_cents: despesasOrcamento.artistas || 0 },
+      { descricao: 'DJs', valor_cents: despesasOrcamento.djs || 0 },
+      { descricao: 'Jantares/Almoços Artistas e Som', valor_cents: despesasMovimentos.jantares || 0 },
+      { descricao: 'Bombos', valor_cents: despesasOrcamento.bombos || 0 },
+      { descricao: 'Som de Rua', valor_cents: despesasOrcamento.somRua || 0 },
+      { descricao: 'Som + Luz', valor_cents: despesasOrcamento.somLuz || 0 },
+      { descricao: 'Palco + Gerador + Vigilante', valor_cents: despesasOrcamento.palco || 0 },
+      { descricao: 'Camarins', valor_cents: despesasOrcamento.camarins || 0 },
+      { descricao: 'Estadias', valor_cents: despesasOrcamento.estadias || 0 },
+      { descricao: 'Iluminação', valor_cents: despesasOrcamento.iluminacao || 0 },
+      { descricao: 'Banda de Música', valor_cents: despesasOrcamento.bandaMusica || 0 },
+      { descricao: 'Ranchos', valor_cents: despesasOrcamento.ranchos || 0 },
+      { descricao: 'Procissão', valor_cents: despesasOrcamento.procissao || 0 },
+      { descricao: 'Bar', valor_cents: (despesasOrcamento.bar || 0) + (despesasMovimentos.bar || 0) },
+    ];
     const totalEntradas = entradas.reduce((sum, row) => sum + row.valor_cents, 0);
     const totalSaidas = saidas.reduce((sum, row) => sum + row.valor_cents, 0);
 

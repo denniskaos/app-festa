@@ -129,9 +129,15 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.equal(resumo.status, 200);
     const resumoHtml = await resumo.text();
     assert.ok(resumoHtml.includes('RESUMO FINAL DE CONTAS'));
-    assert.ok(resumoHtml.includes('Donativos da populaÃ§Ã£o'));
+    assert.ok(resumoHtml.includes('PeditÃ³rios'));
+    assert.ok(resumoHtml.includes('SÃ¡bado Bombos'));
+    assert.ok(resumoHtml.includes('Rifas/Malhas'));
     assert.ok(resumoHtml.includes('LeilÃµes de prendas'));
     assert.ok(resumoHtml.includes('Venda de lugares'));
+    assert.ok(resumoHtml.includes('Jantares/AlmoÃ§os Artistas e Som'));
+    assert.ok(resumoHtml.includes('Palco + Gerador + Vigilante'));
+    assert.ok(resumoHtml.includes('Banda de MÃºsica'));
+    assert.ok(resumoHtml.includes('ProcissÃ£o'));
     assert.ok(resumoHtml.includes('163,45'));
     assert.ok(resumoHtml.includes('PrÃ³xima comissÃ£o'));
 

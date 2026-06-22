@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.1]
+### Changed
+- Personaliza as rubricas do Resumo Final com as receitas Peditórios, Bar, Sábado Bombos e Rifas/Malhas.
+- Preenche as rubricas de serviços a partir do Orçamento e separa Jantares/Almoços e Bar através dos Movimentos.
+
 ## [1.6.0]
 ### Added
 - Nova página “Resumo Final” com entradas, saídas e saldo preenchidos automaticamente a partir dos dados da aplicação.
