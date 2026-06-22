@@ -56,9 +56,10 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     const leiloesBefore = await fetch(`${baseUrl}/leiloes`, { headers: { cookie } });
     assert.equal(leiloesBefore.status, 200);
     const leiloesBeforeHtml = await leiloesBefore.text();
-    for (let numero = 1; numero <= 4; numero += 1) {
+    for (let numero = 1; numero <= 3; numero += 1) {
       assert.ok(leiloesBeforeHtml.includes(`Leilão ${numero}`));
     }
+    assert.equal(leiloesBeforeHtml.includes('Leilão 4'), false);
 
     const updateLeilao = await fetch(`${baseUrl}/leiloes/1`, {
       method: 'POST',
@@ -98,6 +99,14 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(lugaresHtml.includes('Maria Silva'));
     assert.ok(lugaresHtml.includes('Mesa 3 - Lugar 2'));
     assert.ok(lugaresHtml.includes('€ 60.00'));
+
+    const dashboard = await fetch(`${baseUrl}/dashboard`, { headers: { cookie } });
+    assert.equal(dashboard.status, 200);
+    const dashboardHtml = await dashboard.text();
+    assert.ok(dashboardHtml.includes('Leilões recebidos'));
+    assert.ok(dashboardHtml.includes('Lugares pagos'));
+    assert.ok(dashboardHtml.includes('Lugares em falta'));
+    assert.ok(dashboardHtml.includes('€ 163.45'));
 
     const duplicate = await fetch(`${baseUrl}/lugares`, {
       method: 'POST',

@@ -66,8 +66,27 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     FROM peditorios
   `);
 
-  // Saldo final = Patrocínios + Peditórios + Saldo dos Movimentos
-  const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
+  // Leilões: apenas valores já recebidos
+  const totalLeiloes = getInt(`
+    SELECT COALESCE(SUM(valor_recebido_cents), 0) AS n
+    FROM leiloes
+    WHERE numero BETWEEN 1 AND 3
+  `);
+
+  // Venda de lugares: contratado, pago e ainda em falta
+  const totalLugaresVendido = getInt(`
+    SELECT COALESCE(SUM(valor_total_cents), 0) AS n
+    FROM vendas_lugares
+  `);
+  const totalLugaresPago = getInt(`
+    SELECT COALESCE(SUM(valor_pago_cents), 0) AS n
+    FROM vendas_lugares
+  `);
+  const totalLugaresEmFalta = Math.max(0, totalLugaresVendido - totalLugaresPago);
+
+  // Saldo final inclui apenas dinheiro efetivamente recebido.
+  const saldoFinal = totalPatrocinadores + totalPeditorios + totalLeiloes + totalLugaresPago + saldoMov;
+  const caixaTotal = saldoFinal + totalCasa;
   // Compatibilidade com templates antigos que esperam a tabela "Top desvios".
   const topDesvios = [];
   // `var` defensivo aqui evita crash em cenários de merge acidental com redeclaração.
@@ -84,7 +103,12 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     totalCasa,
     totalPatrocinadores,
     totalPeditorios,
+    totalLeiloes,
+    totalLugaresVendido,
+    totalLugaresPago,
+    totalLugaresEmFalta,
     saldoFinal,
+    caixaTotal,
     desvioOrcamento,
     execucaoOrcamentoPct,
     topDesvios,

@@ -25,6 +25,22 @@
     <div class="stat-label">Peditórios</div>
   </div>
   <div class="card stat">
+    <div class="stat-number">€ <%= (totalLeiloes/100).toFixed(2) %></div>
+    <div class="stat-label">Leilões recebidos</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (totalLugaresVendido/100).toFixed(2) %></div>
+    <div class="stat-label">Lugares vendidos</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (totalLugaresPago/100).toFixed(2) %></div>
+    <div class="stat-label">Lugares pagos</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-number">€ <%= (totalLugaresEmFalta/100).toFixed(2) %></div>
+    <div class="stat-label">Lugares em falta</div>
+  </div>
+  <div class="card stat">
     <div class="stat-number"><strong>€ <%= (saldoFinal/100).toFixed(2) %></strong></div>
     <div class="stat-label"><strong>Saldo Final</strong></div>
   </div>
