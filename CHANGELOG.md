@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.9]
+### Changed
+- Reorganiza o menu do telemóvel em duas colunas para apresentar todas as opções sem depender do deslocamento vertical.
+
 ## [1.5.8]
 ### Fixed
 - Acrescenta deslocamento direto pelo gesto do dedo como alternativa para dispositivos iPhone que não movem nativamente o menu fixo.
