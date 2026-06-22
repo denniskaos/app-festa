@@ -2,8 +2,13 @@ import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireRole } from '../middleware/roles.js';
-import { purgeAuthAuditOlderThan } from '../lib/audit.js';
+import { logAuthEvent, purgeAuthAuditOlderThan } from '../lib/audit.js';
 import { clearLoginRateLimitByEmail } from '../middleware/loginRateLimit.js';
+import {
+  approvePasswordResetRequest,
+  dismissPasswordResetRequest,
+  listPasswordResetRequests,
+} from '../lib/passwordReset.js';
 
 const router = Router();
 
@@ -80,6 +85,59 @@ router.post('/seguranca/unlock', requireAuth, requireRole('admin'), (req, res) =
   const email = String(req.body.email || '').trim().toLowerCase();
   const removed = clearLoginRateLimitByEmail(email);
   res.redirect(`/seguranca/audit?msg=${encodeURIComponent(`Unlock ${email || '(vazio)'}: ${removed} bloqueios removidos.`)}`);
+});
+
+router.get('/seguranca/password-resets', requireAuth, requireRole('admin'), (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.render('security_password_resets', {
+    title: 'Recuperações de password',
+    requests: listPasswordResetRequests(100),
+    msg: req.query.msg || null,
+  });
+});
+
+router.post('/seguranca/password-resets/:id/generate', requireAuth, requireRole('admin'), (req, res) => {
+  const requestId = Number(req.params.id);
+  const approved = approvePasswordResetRequest(requestId, req.session.user.id);
+  if (!approved) {
+    return res.redirect('/seguranca/password-resets?msg=' + encodeURIComponent('O pedido já não está pendente.'));
+  }
+
+  const configuredBaseUrl = String(process.env.PUBLIC_BASE_URL || '').trim().replace(/\/+$/, '');
+  const baseUrl = configuredBaseUrl || `${req.protocol}://${req.get('host')}`;
+  const resetLink = `${baseUrl}/password/reset?token=${encodeURIComponent(approved.token)}`;
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+
+  logAuthEvent({
+    event: 'password_reset_link_generated',
+    email: approved.email,
+    ip,
+    meta: { requestId, userId: approved.user_id, adminId: req.session.user.id },
+  });
+
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  return res.render('security_reset_link', {
+    title: 'Link temporário de recuperação',
+    name: approved.name,
+    email: approved.email,
+    resetLink,
+  });
+});
+
+router.post('/seguranca/password-resets/:id/dismiss', requireAuth, requireRole('admin'), (req, res) => {
+  const requestId = Number(req.params.id);
+  const dismissed = dismissPasswordResetRequest(requestId, req.session.user.id);
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  if (dismissed) {
+    logAuthEvent({
+      event: 'password_reset_request_dismissed',
+      email: req.session.user.email,
+      ip,
+      meta: { requestId, adminId: req.session.user.id },
+    });
+  }
+  const msg = dismissed ? 'Pedido marcado como resolvido.' : 'O pedido já não está pendente.';
+  res.redirect('/seguranca/password-resets?msg=' + encodeURIComponent(msg));
 });
 
 export default router;

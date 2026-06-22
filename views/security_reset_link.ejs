@@ -1,0 +1,13 @@
+<section class="card">
+  <h1>Link temporário de recuperação</h1>
+  <p>Foi criado um link de utilização única para <strong><%= name %></strong> (<%= email %>).</p>
+  <div class="alert">
+    Copia e entrega este link diretamente ao utilizador. Por segurança, só é apresentado agora e expira dentro de 30 minutos.
+  </div>
+  <label for="reset-link">Link de recuperação</label>
+  <input id="reset-link" type="text" value="<%= resetLink %>" readonly style="width:100%;" />
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+    <a class="btn btn-primary" href="<%= resetLink %>" target="_blank" rel="noopener noreferrer">Testar link</a>
+    <a class="btn btn-light" href="/seguranca/password-resets">Voltar aos pedidos</a>
+  </div>
+</section>

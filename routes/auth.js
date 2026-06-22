@@ -1,12 +1,12 @@
 // routes/auth.js
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
-import { createHash, randomBytes } from 'crypto';
 import db from '../db.js';
 import { rotateCsrfToken, validatePasswordStrength } from '../lib/security.js';
 import { clearLoginRateLimit, clearLoginRateLimitByEmail, loginRateLimit } from '../middleware/loginRateLimit.js';
 import { logger } from '../lib/logger.js';
 import { logAuthEvent } from '../lib/audit.js';
+import { findValidResetToken, recordPasswordResetRequest } from '../lib/passwordReset.js';
 
 const router = Router();
 
@@ -19,35 +19,6 @@ router.use(['/login', '/registar', '/password/forgot', '/password/reset'], (_req
   res.set('Expires', '0');
   next();
 });
-
-function hashResetToken(token) {
-  return createHash('sha256').update(String(token || '')).digest('hex');
-}
-
-function createPasswordResetToken(userId) {
-  const token = randomBytes(32).toString('hex');
-  const tokenHash = hashResetToken(token);
-  db.prepare(`
-    INSERT INTO password_resets (user_id, token_hash, expires_at)
-    VALUES (?, ?, datetime('now', '+30 minutes'))
-  `).run(userId, tokenHash);
-  return token;
-}
-
-function findValidResetToken(token) {
-  if (!token) return null;
-  const tokenHash = hashResetToken(token);
-  return db.prepare(`
-    SELECT pr.id, pr.user_id, u.email
-    FROM password_resets pr
-    JOIN users u ON u.id = pr.user_id
-    WHERE pr.token_hash = ?
-      AND pr.used_at IS NULL
-      AND datetime(pr.expires_at) > datetime('now')
-    ORDER BY pr.id DESC
-    LIMIT 1
-  `).get(tokenHash);
-}
 
 /* =========================================
    Admin inicial (se não existir)
@@ -123,9 +94,7 @@ router.get('/password/forgot', (req, res) => {
 router.post('/password/forgot', (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-  const genericMsg = process.env.NODE_ENV === 'production'
-    ? 'Se o email existir, o pedido foi registado. Contacta a administração para concluir a recuperação.'
-    : 'Se o email existir, foi gerado um link temporário de recuperação.';
+  const genericMsg = 'Se o email existir, o pedido foi registado. Contacta a administração para concluir a recuperação.';
 
   if (!email) {
     return res.render('forgot_password', {
@@ -135,9 +104,6 @@ router.post('/password/forgot', (req, res) => {
       resetLink: null,
     });
   }
-
-  // limpeza simples de tokens antigos/expirados
-  db.prepare(`DELETE FROM password_resets WHERE used_at IS NOT NULL OR datetime(expires_at) <= datetime('now')`).run();
 
   const user = db.prepare('SELECT id, email FROM users WHERE email=?').get(email);
   if (!user) {
@@ -150,24 +116,15 @@ router.post('/password/forgot', (req, res) => {
     });
   }
 
-  // invalida tokens anteriores do mesmo utilizador
-  db.prepare(`UPDATE password_resets SET used_at=datetime('now') WHERE user_id=? AND used_at IS NULL`).run(user.id);
-  const token = createPasswordResetToken(user.id);
-  const resetLink = `${req.protocol}://${req.get('host')}/password/reset?token=${encodeURIComponent(token)}`;
-
-  logAuthEvent({ event: 'password_reset_requested', email, ip, meta: { userId: user.id } });
-  logger.info('password reset link generated', {
-    email,
-    resetLink,
-    deliveryMode: process.env.NODE_ENV === 'production' ? 'admin/manual' : 'dev-link',
-  });
+  const requestId = recordPasswordResetRequest(user.id, ip);
+  logAuthEvent({ event: 'password_reset_requested', email, ip, meta: { userId: user.id, requestId } });
+  logger.info('password reset request recorded', { requestId, deliveryMode: 'admin/manual' });
 
   return res.render('forgot_password', {
     title: 'Recuperar password',
     error: null,
     msg: genericMsg,
-    // Em produção, não mostrar link no UI (fica em logs para operação).
-    resetLink: process.env.NODE_ENV === 'production' ? null : resetLink,
+    resetLink: null,
   });
 });
 

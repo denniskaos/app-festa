@@ -12,10 +12,8 @@ const LOCAL_DATA_DIR = path.join(__dirname, 'data');
 const DEFAULT_LOCAL_DB = path.join(LOCAL_DATA_DIR, 'festa.db');
 const DB_PATH = process.env.DATABASE_PATH || DEFAULT_LOCAL_DB;
 
-// Em dev/local garante a pasta ./data
-if (!process.env.DATABASE_PATH) {
-  fs.mkdirSync(LOCAL_DATA_DIR, { recursive: true });
-}
+// Garante a pasta da base, tanto com o caminho local como com DATABASE_PATH.
+fs.mkdirSync(path.dirname(path.resolve(DB_PATH)), { recursive: true });
 
 // Abre a DB
 const db = new Database(DB_PATH, { fileMustExist: false, timeout: 5000 });
@@ -124,9 +122,23 @@ const migrate = db.transaction(() => {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS password_reset_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      requested_at TEXT NOT NULL DEFAULT (datetime('now')),
+      request_ip TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      handled_at TEXT,
+      handled_by INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (handled_by) REFERENCES users(id) ON DELETE SET NULL
+    );
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_password_resets_user_id ON password_resets(user_id);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_password_resets_expires_at ON password_resets(expires_at);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_password_reset_requests_status ON password_reset_requests(status, requested_at);`);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_requests_pending_user ON password_reset_requests(user_id) WHERE status='pending';`);
 
   // --- Organização de jantares: Mesas & Convidados ---
   db.exec(`
