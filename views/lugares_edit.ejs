@@ -1,0 +1,24 @@
+<div class="toolbar">
+  <h1>Editar venda de lugar</h1>
+  <a class="btn btn-light" href="/lugares">Voltar</a>
+</div>
+
+<% if (error) { %><div class="alert"><%= error %></div><% } %>
+
+<section class="card">
+  <form method="post" action="/lugares/<%= venda.id %>" class="form-grid">
+    <label>Nome do comprador
+      <input type="text" name="nome" maxlength="160" required value="<%= venda.nome %>" />
+    </label>
+    <label>Lugar
+      <input type="text" name="lugar" maxlength="80" required value="<%= venda.lugar %>" />
+    </label>
+    <label>Valor total (€)
+      <input type="number" name="valor_total" min="0" step="0.01" required value="<%= euros(venda.valor_total_cents) %>" />
+    </label>
+    <label>Valor pago (€)
+      <input type="number" name="valor_pago" min="0" step="0.01" required value="<%= euros(venda.valor_pago_cents) %>" />
+    </label>
+    <button class="btn" type="submit">Guardar alterações</button>
+  </form>
+</section>

@@ -1,0 +1,82 @@
+<div class="toolbar">
+  <div>
+    <h1>Venda de lugares</h1>
+    <p class="muted">Controlo dos lugares vendidos e dos pagamentos em falta.</p>
+  </div>
+</div>
+
+<section class="cards">
+  <article class="card">
+    <div class="stat-label">Valor total vendido</div>
+    <div class="stat-number">€ <%= euros(totals.total) %></div>
+  </article>
+  <article class="card">
+    <div class="stat-label">Total pago</div>
+    <div class="stat-number">€ <%= euros(totals.pago) %></div>
+  </article>
+  <article class="card">
+    <div class="stat-label">Total em falta</div>
+    <div class="stat-number">€ <%= euros(totals.emFalta) %></div>
+  </article>
+</section>
+
+<% if (error) { %><div class="alert"><%= error %></div><% } %>
+<% if (msg) { %><div class="ok"><%= msg %></div><% } %>
+
+<% if (user?.role !== 'viewer') { %>
+  <section class="card">
+    <h2>Registar venda</h2>
+    <form method="post" action="/lugares" class="form-grid">
+      <label>Nome do comprador
+        <input type="text" name="nome" maxlength="160" required value="<%= values.nome || '' %>" />
+      </label>
+      <label>Lugar
+        <input type="text" name="lugar" maxlength="80" required placeholder="Ex.: Mesa 3 — Lugar 2" value="<%= values.lugar || '' %>" />
+      </label>
+      <label>Valor total (€)
+        <input type="number" name="valor_total" min="0" step="0.01" required value="<%= values.valor_total || '' %>" />
+      </label>
+      <label>Valor pago (€)
+        <input type="number" name="valor_pago" min="0" step="0.01" required value="<%= values.valor_pago || '' %>" />
+      </label>
+      <button class="btn" type="submit">Registar venda</button>
+    </form>
+  </section>
+<% } %>
+
+<div class="table-wrap mt">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Comprador</th>
+        <th>Lugar</th>
+        <th class="num">Valor total</th>
+        <th class="num">Pago</th>
+        <th class="num">Em falta</th>
+        <% if (user?.role !== 'viewer') { %><th>Ações</th><% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (!vendas.length) { %>
+        <tr><td colspan="<%= user?.role !== 'viewer' ? 6 : 5 %>" class="muted">Ainda não existem lugares vendidos.</td></tr>
+      <% } %>
+      <% vendas.forEach(venda => { %>
+        <tr>
+          <td><%= venda.nome %></td>
+          <td><strong><%= venda.lugar %></strong></td>
+          <td class="num nowrap">€ <%= euros(venda.valor_total_cents) %></td>
+          <td class="num nowrap">€ <%= euros(venda.valor_pago_cents) %></td>
+          <td class="num nowrap"><strong>€ <%= euros(venda.valor_em_falta_cents) %></strong></td>
+          <% if (user?.role !== 'viewer') { %>
+            <td class="actions">
+              <a class="btn btn-light" href="/lugares/<%= venda.id %>/edit">Editar</a>
+              <form method="post" action="/lugares/<%= venda.id %>/delete" onsubmit="return confirm('Apagar esta venda?')">
+                <button class="btn btn-danger" type="submit">Apagar</button>
+              </form>
+            </td>
+          <% } %>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
