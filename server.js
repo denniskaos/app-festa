@@ -79,8 +79,7 @@ if (IS_PROD && !SESSION_SECRET) {
   logger.warn('session secret missing', { detail: msg });
 }
 
-// Em Render (DATABASE_PATH presente) → /data/sessions.sqlite
-// Em dev/local → ./data/sessions.sqlite
+// Em produção, guarda as sessões junto da DB persistente; em dev usa ./data.
 const SESSIONS_DB =
   process.env.SESSIONS_DB
     || (process.env.DATABASE_PATH
@@ -165,7 +164,7 @@ if (LOG_REQUESTS) {
     logger.info('request', {
       requestId: req.requestId,
       method: req.method,
-      url: req.originalUrl,
+      url: String(req.originalUrl || '').replace(/([?&]token=)[^&]*/gi, '$1[redacted]'),
       ip: req.ip,
       userId: req.session?.user?.id || null,
     });
@@ -423,6 +422,23 @@ try {
       );
       CREATE INDEX IF NOT EXISTS idx_password_resets_user_id ON password_resets(user_id);
       CREATE INDEX IF NOT EXISTS idx_password_resets_expires_at ON password_resets(expires_at);
+
+      /* Password reset requests awaiting an administrator */
+      CREATE TABLE IF NOT EXISTS password_reset_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        requested_at TEXT NOT NULL DEFAULT (datetime('now')),
+        request_ip TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        handled_at TEXT,
+        handled_by INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (handled_by) REFERENCES users(id) ON DELETE SET NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_password_reset_requests_status
+        ON password_reset_requests(status, requested_at);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_requests_pending_user
+        ON password_reset_requests(user_id) WHERE status='pending';
 
       /* Settings (linha fixa id=1) */
       CREATE TABLE IF NOT EXISTS settings (

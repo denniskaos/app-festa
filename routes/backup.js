@@ -2,14 +2,19 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { requireRole } from '../middleware/roles.js';
 
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import ExcelJS from 'exceljs';
 import archiver from 'archiver';
 
 const router = Router();
+
+router.use('/backup', requireAuth, requireRole(['admin', 'financeiro']));
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,17 +138,26 @@ router.get('/backup', requireAuth, (_req, res) => {
 });
 
 /* ----------------- download direto do ficheiro .db ----------------- */
-router.get('/backup/download', requireAuth, (req, res, next) => {
+router.get('/backup/download', requireAuth, async (_req, res, next) => {
+  let temporaryBackup = null;
   try {
     const dbFile = getDbFilePath();
     if (!dbFile || !fs.existsSync(dbFile)) {
       return res.status(404).type('text').send('Ficheiro de base de dados não encontrado.');
     }
+
+    temporaryBackup = path.join(os.tmpdir(), `festa-db-${randomUUID()}.db`);
+    await db.backup(temporaryBackup);
+
     const filename = `festa-db-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.db`;
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    fs.createReadStream(dbFile).pipe(res);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.download(temporaryBackup, filename, (error) => {
+      fs.rm(temporaryBackup, { force: true }, () => {});
+      temporaryBackup = null;
+      if (error && !res.headersSent) next(error);
+    });
   } catch (e) {
+    if (temporaryBackup) fs.rm(temporaryBackup, { force: true }, () => {});
     next(e);
   }
 });

@@ -1,22 +1,16 @@
 services:
   - type: web
-    name: festa-app
+    name: app-festa-1
     env: node
     plan: starter
     branch: main
     autoDeploy: true
     # region: frankfurt           # (opcional) escolhe Europa se quiseres latência menor
-    healthCheckPath: /healthz
+    healthCheckPath: /readyz
     numInstances: 1               # com Disk, mantém 1 instância
 
-    buildCommand: npm ci
-    startCommand: |
-      bash -lc '
-        mkdir -p /data
-        # Se existir uma seed local, copia apenas uma vez
-        if [ ! -f /data/festa.db ] && [ -f data/festa.db ]; then cp data/festa.db /data/festa.db; fi
-        node server.js
-      '
+    buildCommand: npm ci && DATABASE_PATH=/tmp/festa-build-test.db SESSIONS_DB=/tmp/festa-build-sessions.sqlite npm test
+    startCommand: npm start
 
     envVars:
       - key: NODE_ENV
@@ -24,7 +18,11 @@ services:
       - key: NODE_VERSION         # evita upgrades de runtime inesperados
         value: 20
       - key: DATABASE_PATH        # o teu código deve ler daqui
-        value: /data/festa.db
+        value: /opt/render/project/src/data/festa.db
+      - key: SESSIONS_DB
+        value: /opt/render/project/src/data/sessions.sqlite
+      - key: PUBLIC_BASE_URL
+        value: https://app-festa-1.onrender.com
       - key: SESSION_SECRET
         generateValue: true
       - key: TZ                   # logs/horários coerentes
@@ -32,5 +30,5 @@ services:
 
     disk:
       name: festa-data
-      mountPath: /data
+      mountPath: /opt/render/project/src/data
       sizeGB: 1

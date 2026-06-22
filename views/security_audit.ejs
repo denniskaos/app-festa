@@ -1,5 +1,8 @@
 <section class="card">
-  <h1>Auditoria de Segurança</h1>
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap;">
+    <h1>Auditoria de Segurança</h1>
+    <a class="btn btn-light" href="/seguranca/password-resets">Pedidos de recuperação</a>
+  </div>
   <p class="muted">Últimos 200 eventos de autenticação.</p>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0 12px;">
     <article class="card"><strong>Total (24h)</strong><div><%= stats?.total_24h || 0 %></div></article>

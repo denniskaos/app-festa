@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.7]
+### Added
+- Recuperação manual segura: pedidos ficam pendentes numa área administrativa e o link temporário é apresentado apenas uma vez ao administrador.
+- CI no GitHub Actions para executar verificações e testes em cada pull request e push para `main`.
+
+### Changed
+- Deploy Render alinhado com o disco persistente real em `/opt/render/project/src/data` e health check promovido para `/readyz`.
+- Backup completo da base de dados passa a usar a API de backup online do SQLite, incluindo alterações ainda presentes em WAL.
+
+### Fixed
+- Links secretos de recuperação deixam de ser escritos nos logs de produção.
+- Rotas de backup ficam limitadas a administradores e utilizadores financeiros autenticados.
+
 ## [1.4.6]
 ### Added
 - Segurança: auditoria de autenticação persistente com interface administrativa (`/seguranca/audit`) para listar/exportar/purgar eventos e desbloquear tentativas por email.

@@ -1,15 +1,15 @@
 {
   "name": "festa-aldeia-app",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "private": true,
   "packageManager": "npm@10.8.2",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/check-conflicts.mjs && node --check server.js && node --check routes/*.js && node --check lib/*.js && nodemon server.js",
-    "start": "node scripts/check-conflicts.mjs && node --check server.js && node --check routes/*.js && node --check lib/*.js && node server.js",
-    "test": "node --check server.js && node --check db.js && node --check routes/*.js && node --check lib/*.js && node scripts/check-conflicts.mjs && node --test tests/*.test.js",
-    "build": "echo \"no build step\"",
-    "postinstall": "npm rebuild better-sqlite3 || true"
+    "check": "node scripts/check-conflicts.mjs && node scripts/check-syntax.mjs",
+    "dev": "npm run check && nodemon server.js",
+    "start": "npm run check && node server.js",
+    "test": "npm run check && node --test tests/*.test.js",
+    "build": "echo \"no build step\""
   },
   "engines": {
     "node": "20.x"

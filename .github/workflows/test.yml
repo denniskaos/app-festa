@@ -1,0 +1,26 @@
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_PATH: ${{ runner.temp }}/festa-test.db
+      SESSIONS_DB: ${{ runner.temp }}/festa-sessions.sqlite
+      SESSION_SECRET: github-actions-test-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
