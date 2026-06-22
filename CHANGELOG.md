@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.10]
+### Fixed
+- Impede a regra antiga do menu aberto de anular o formato móvel em duas colunas.
+- Corrige o posicionamento horizontal do menu móvel para não herdar a margem lateral antiga.
+
 ## [1.5.9]
 ### Changed
 - Reorganiza o menu do telemóvel em duas colunas para apresentar todas as opções sem depender do deslocamento vertical.

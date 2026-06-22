@@ -83,7 +83,7 @@ label{display:block;margin:8px 0}
 @media (max-width: 899px){
   .nav-toggle{display:inline-flex;}
   .nav{
-    position:fixed; top:64px; right:0; bottom:auto; width:100%; max-width:560px;
+    position:fixed; top:64px; right:0; left:auto; bottom:auto; width:100%; max-width:560px;
     height:calc(100vh - 64px);
     height:calc(100dvh - 64px);
     max-height:calc(100dvh - 64px);
@@ -103,7 +103,7 @@ label{display:block;margin:8px 0}
     -webkit-overflow-scrolling:touch;
     padding-bottom:max(12px, env(safe-area-inset-bottom));
   }
-  .nav.open{ transform:translateX(0); }
+  .nav.open{ display:grid; transform:translateX(0); }
   .nav a{
     display:flex;
     align-items:center;
