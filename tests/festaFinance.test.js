@@ -100,14 +100,28 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(lugaresHtml.includes('Mesa 3 - Lugar 2'));
     assert.ok(lugaresHtml.includes('€ 60.00'));
 
+    const updateCasal = await fetch(`${baseUrl}/casais/1`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ nome: 'Casal 1', valor: '500' }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(updateCasal.status, 302);
+
     const dashboard = await fetch(`${baseUrl}/dashboard`, { headers: { cookie } });
     assert.equal(dashboard.status, 200);
     const dashboardHtml = await dashboard.text();
     assert.ok(dashboardHtml.includes('Leilões recebidos'));
     assert.ok(dashboardHtml.includes('Lugares recebidos'));
-    assert.ok(dashboardHtml.includes('Lugares em falta'));
+    assert.equal(dashboardHtml.includes('Lugares em falta'), false);
     assert.equal(dashboardHtml.includes('Lugares vendidos'), false);
     assert.ok(dashboardHtml.includes('€ 163.45'));
+    assert.ok(dashboardHtml.includes('€ 500.00'));
+    assert.equal(dashboardHtml.includes('€ 663.45'), false);
+    assert.equal(dashboardHtml.includes('Caixa Total (Saldo + Em Casa)'), false);
 
     const duplicate = await fetch(`${baseUrl}/lugares`, {
       method: 'POST',

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.3]
+### Fixed
+- O Caixa Total deixa de somar o valor “Em Casa”, evitando contabilizar o mesmo dinheiro duas vezes.
+- Remove o indicador “Lugares em falta” do Painel.
+
 ## [1.5.2]
 ### Changed
 - O Painel mostra nos lugares apenas o valor efetivamente pago, identificado como “Lugares recebidos”.
