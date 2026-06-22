@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('nav-toggle');
   const nav = document.getElementById('nav-menu');
   if (btn && nav) {
+    let touchStartY = 0;
+    let touchStartScroll = 0;
+
     const close = () => {
       btn.setAttribute('aria-expanded', 'false');
       nav.classList.remove('open');
@@ -51,6 +54,22 @@ document.addEventListener('DOMContentLoaded', () => {
       nav.classList.toggle('open', !open); // precisa de .nav.open no CSS
       document.body.classList.toggle('menu-open', !open);
     });
+
+    // Fallback para WebKit no iPhone: alguns dispositivos não deslocam
+    // corretamente um painel fixo dentro de um cabeçalho sticky.
+    nav.addEventListener('touchstart', event => {
+      if (!nav.classList.contains('open') || event.touches.length !== 1) return;
+      touchStartY = event.touches[0].clientY;
+      touchStartScroll = nav.scrollTop;
+    }, { passive: true });
+
+    nav.addEventListener('touchmove', event => {
+      if (!nav.classList.contains('open') || event.touches.length !== 1) return;
+      const distance = touchStartY - event.touches[0].clientY;
+      if (Math.abs(distance) < 2) return;
+      nav.scrollTop = touchStartScroll + distance;
+      event.preventDefault();
+    }, { passive: false });
 
     // Fechar com ESC e ao voltar a desktop
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });

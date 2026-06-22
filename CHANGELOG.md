@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.8]
+### Fixed
+- Acrescenta deslocamento direto pelo gesto do dedo como alternativa para dispositivos iPhone que não movem nativamente o menu fixo.
+
 ## [1.5.7]
 ### Fixed
 - Define explicitamente a altura rolável do menu móvel no Safari do iPhone.
