@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.6]
+### Fixed
+- Permite deslocar verticalmente o menu no telemóvel para alcançar todas as opções.
+- Impede a página de fundo de se mover enquanto o menu móvel está aberto.
+
 ## [1.5.5]
 ### Changed
 - Centra o menu principal dentro da mesma largura do conteúdo e permite uma distribuição equilibrada em várias linhas.
