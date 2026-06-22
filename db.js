@@ -91,6 +91,23 @@ const migrate = db.transaction(() => {
       valor_entregue_cents INTEGER NOT NULL DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS leiloes (
+      numero INTEGER PRIMARY KEY CHECK (numero BETWEEN 1 AND 4),
+      dt TEXT,
+      valor_recebido_cents INTEGER NOT NULL DEFAULT 0 CHECK (valor_recebido_cents >= 0)
+    );
+
+    CREATE TABLE IF NOT EXISTS vendas_lugares (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      lugar TEXT NOT NULL COLLATE NOCASE UNIQUE,
+      valor_total_cents INTEGER NOT NULL DEFAULT 0 CHECK (valor_total_cents >= 0),
+      valor_pago_cents INTEGER NOT NULL DEFAULT 0 CHECK (
+        valor_pago_cents >= 0 AND valor_pago_cents <= valor_total_cents
+      ),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS jantares (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       dt TEXT,
@@ -139,6 +156,9 @@ const migrate = db.transaction(() => {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_password_resets_expires_at ON password_resets(expires_at);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_password_reset_requests_status ON password_reset_requests(status, requested_at);`);
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_requests_pending_user ON password_reset_requests(user_id) WHERE status='pending';`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_vendas_lugares_nome ON vendas_lugares(nome COLLATE NOCASE);`);
+  const insertLeilao = db.prepare(`INSERT OR IGNORE INTO leiloes (numero) VALUES (?)`);
+  for (let numero = 1; numero <= 4; numero += 1) insertLeilao.run(numero);
 
   // --- Organização de jantares: Mesas & Convidados ---
   db.exec(`

@@ -1,0 +1,52 @@
+<div class="toolbar">
+  <div>
+    <h1>Leilões</h1>
+    <p class="muted">Registo dos quatro leilões da festa.</p>
+  </div>
+</div>
+
+<section class="cards">
+  <article class="card">
+    <div class="stat-label">Total recebido nos leilões</div>
+    <div class="stat-number">€ <%= euros(total) %></div>
+  </article>
+</section>
+
+<% if (error) { %><div class="alert"><%= error %></div><% } %>
+<% if (msg) { %><div class="ok"><%= msg %></div><% } %>
+
+<div class="table-wrap mt">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Leilão</th>
+        <th>Data</th>
+        <th>Valor recebido (€)</th>
+        <% if (user?.role !== 'viewer') { %><th>Ação</th><% } %>
+      </tr>
+    </thead>
+    <tbody>
+      <% leiloes.forEach(leilao => { %>
+        <tr>
+          <td><strong>Leilão <%= leilao.numero %></strong></td>
+          <td>
+            <input type="date" name="dt" value="<%= leilao.dt %>"
+                   form="leilao-<%= leilao.numero %>" <%= user?.role === 'viewer' ? 'disabled' : '' %> />
+          </td>
+          <td>
+            <input type="number" name="valor_recebido" min="0" step="0.01"
+                   value="<%= euros(leilao.valor_recebido_cents) %>"
+                   form="leilao-<%= leilao.numero %>" <%= user?.role === 'viewer' ? 'disabled' : '' %> />
+          </td>
+          <% if (user?.role !== 'viewer') { %>
+            <td class="actions">
+              <form id="leilao-<%= leilao.numero %>" method="post" action="/leiloes/<%= leilao.numero %>">
+                <button class="btn" type="submit">Guardar</button>
+              </form>
+            </td>
+          <% } %>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

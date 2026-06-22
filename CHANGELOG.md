@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0]
+### Added
+- Página de Leilões com quatro registos fixos, data, valor recebido e total acumulado.
+- Página de Venda de Lugares com comprador, lugar, valor total, valor pago e cálculo automático do valor em falta.
+- Validação para impedir pagamentos acima do valor da venda e a venda duplicada do mesmo lugar.
+
 ## [1.4.7]
 ### Added
 - Recuperação manual segura: pedidos ficam pendentes numa área administrativa e o link temporário é apresentado apenas uma vez ao administrador.

@@ -32,6 +32,7 @@ import importRoutes from './routes/import.js';
 import backupRoutes from './routes/backup.js';
 import peditoriosRoutes from './routes/peditorios.js';
 import securityRoutes from './routes/security.js';
+import festaFinanceRoutes from './routes/festa_finance.js';
 
 // __dirname em ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -376,6 +377,27 @@ try {
         valor_entregue_cents INTEGER NOT NULL DEFAULT 0
       );
 
+      /* Leilões (quatro momentos da festa) */
+      CREATE TABLE IF NOT EXISTS leiloes (
+        numero INTEGER PRIMARY KEY CHECK (numero BETWEEN 1 AND 4),
+        dt TEXT,
+        valor_recebido_cents INTEGER NOT NULL DEFAULT 0 CHECK (valor_recebido_cents >= 0)
+      );
+
+      /* Venda de lugares da festa */
+      CREATE TABLE IF NOT EXISTS vendas_lugares (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        lugar TEXT NOT NULL COLLATE NOCASE UNIQUE,
+        valor_total_cents INTEGER NOT NULL DEFAULT 0 CHECK (valor_total_cents >= 0),
+        valor_pago_cents INTEGER NOT NULL DEFAULT 0 CHECK (
+          valor_pago_cents >= 0 AND valor_pago_cents <= valor_total_cents
+        ),
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_vendas_lugares_nome
+        ON vendas_lugares(nome COLLATE NOCASE);
+
       /* Jantares */
       CREATE TABLE IF NOT EXISTS jantares (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -463,6 +485,9 @@ try {
     insCat.run('Genérico', 'receita');
     insCat.run('Genérico', 'despesa');
 
+    const insLeilao = dbi.prepare(`INSERT OR IGNORE INTO leiloes (numero) VALUES (?)`);
+    for (let numero = 1; numero <= 4; numero += 1) insLeilao.run(numero);
+
     const rowSet = dbi.prepare(`SELECT 1 FROM settings WHERE id=1`).get();
     if (!rowSet) {
       dbi.prepare(`
@@ -505,6 +530,7 @@ app.use('/', importRoutes);        // /import
 app.use('/', backupRoutes);        // /backup
 app.use('/', peditoriosRoutes);    // /peditorios
 app.use('/', securityRoutes);      // /seguranca/audit
+app.use('/', festaFinanceRoutes);  // /leiloes, /lugares
 
 // ---- RAIZ -> PAINEL ----
 app.get('/', (_req, res) => res.redirect('/dashboard'));
