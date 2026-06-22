@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.5]
+### Changed
+- Centra o menu principal dentro da mesma largura do conteúdo e permite uma distribuição equilibrada em várias linhas.
+- Usa a versão da aplicação para atualizar automaticamente os estilos no navegador após cada publicação.
+
 ## [1.5.4]
 ### Changed
 - Remove o indicador redundante “Caixa Total” do Painel, mantendo apenas o “Saldo Final”.
