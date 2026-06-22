@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.7]
+### Fixed
+- Define explicitamente a altura rolável do menu móvel no Safari do iPhone.
+- Impede que as opções do menu encolham, permitindo chegar às opções finais e ao botão “Sair”.
+
 ## [1.5.6]
 ### Fixed
 - Permite deslocar verticalmente o menu no telemóvel para alcançar todas as opções.
