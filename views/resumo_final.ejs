@@ -1,0 +1,108 @@
+<section class="no-print final-report-controls">
+  <div class="toolbar">
+    <div>
+      <h1>Resumo Final de Contas</h1>
+      <p class="muted">Preenche os dados complementares, atualiza o documento e imprime ou guarda em PDF.</p>
+    </div>
+    <button class="btn" type="button" onclick="window.print()">Imprimir / Guardar em PDF</button>
+  </div>
+
+  <form method="get" action="/resumo-final" class="card form-grid final-report-form">
+    <label>Início do período
+      <input type="date" name="inicio" value="<%= inicio %>">
+    </label>
+    <label>Fim do período
+      <input type="date" name="fim" value="<%= fim %>">
+    </label>
+    <label class="form-wide">Destino do saldo final
+      <textarea name="destino" rows="2" placeholder="Ex.: apoio à paróquia, próxima comissão de festas…"><%= destino %></textarea>
+    </label>
+    <label class="form-wide">Observações adicionais
+      <textarea name="observacoes" rows="3" placeholder="Opcional"><%= observacoes %></textarea>
+    </label>
+    <div class="form-wide">
+      <button class="btn btn-light" type="submit">Atualizar documento</button>
+      <span class="muted">O resumo inclui todos os valores registados na aplicação.</span>
+    </div>
+  </form>
+</section>
+
+<article class="final-report">
+  <header class="final-report-header">
+    <img src="/public/img/logo.png" alt="" class="final-report-logo">
+    <div>
+      <h1>RESUMO FINAL DE CONTAS</h1>
+      <h2>Festa em Honra de Nossa Senhora da Graça 2026</h2>
+      <p>Vila Caiz</p>
+    </div>
+  </header>
+
+  <dl class="final-report-meta">
+    <div><dt>Entidade organizadora:</dt><dd>Comissão de Festas em Honra de Nossa Senhora da Graça 2026</dd></div>
+    <div><dt>Localidade:</dt><dd>Vila Caiz</dd></div>
+    <div><dt>Período a que respeitam as contas:</dt><dd><%= inicioFormatado %> a <%= fimFormatado %></dd></div>
+  </dl>
+
+  <section class="report-section">
+    <h2>1. Introdução</h2>
+    <p>A Comissão de Festas em Honra de Nossa Senhora da Graça 2026 vem, por este meio, apresentar o resumo final das contas relativas à organização e realização da festa.</p>
+    <p>Este documento tem como objetivo demonstrar, de forma simples e transparente, todas as entradas e saídas de dinheiro, bem como o saldo final apurado.</p>
+  </section>
+
+  <section class="report-section">
+    <h2>2. Entradas de dinheiro</h2>
+    <table class="report-table">
+      <thead><tr><th>Descrição</th><th>Valor</th></tr></thead>
+      <tbody>
+        <% entradas.forEach(row => { %>
+          <tr><td><%= row.descricao %></td><td><%= formatMoney(row.valor_cents) %></td></tr>
+        <% }) %>
+      </tbody>
+      <tfoot><tr><th>Total de entradas</th><th><%= formatMoney(totalEntradas) %></th></tr></tfoot>
+    </table>
+  </section>
+
+  <section class="report-section">
+    <h2>3. Saídas de dinheiro</h2>
+    <table class="report-table">
+      <thead><tr><th>Descrição</th><th>Valor</th></tr></thead>
+      <tbody>
+        <% saidas.forEach(row => { %>
+          <tr><td><%= row.descricao %></td><td><%= formatMoney(row.valor_cents) %></td></tr>
+        <% }) %>
+      </tbody>
+      <tfoot><tr><th>Total de saídas</th><th><%= formatMoney(totalSaidas) %></th></tr></tfoot>
+    </table>
+  </section>
+
+  <section class="report-section">
+    <h2>4. Resultado final</h2>
+    <table class="report-table report-result">
+      <tbody>
+        <tr><td>Total de entradas</td><td><%= formatMoney(totalEntradas) %></td></tr>
+        <tr><td>Total de saídas</td><td><%= formatMoney(totalSaidas) %></td></tr>
+        <tr><th>Saldo final da festa</th><th><%= formatMoney(saldoFinal) %></th></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="report-section">
+    <h2>5. Observações</h2>
+    <p>A Comissão procurou gerir todos os valores recebidos com responsabilidade, transparência e respeito por todos os que contribuíram para a realização da festa.</p>
+    <% if (observacoes) { %><p class="report-preserve-lines"><%= observacoes %></p><% } %>
+    <p><strong>O saldo final apurado será destinado a:</strong></p>
+    <p class="report-destination"><%= destino || '____________________________________________________________________' %></p>
+  </section>
+
+  <section class="report-section">
+    <h2>6. Agradecimento</h2>
+    <p>A Comissão de Festas agradece ao Sr. Padre, à Paróquia, à população de Vila Caiz, aos patrocinadores, aos colaboradores, aos voluntários e a todos os que, de alguma forma, contribuíram para a realização da Festa em Honra de Nossa Senhora da Graça 2026.</p>
+  </section>
+
+  <section class="report-signatures">
+    <p>Vila Caiz, ____ de ____________________ de 2026</p>
+    <div class="signature-lines"><span>A Comissão de Festas</span><span>O Pároco</span></div>
+  </section>
+
+  <footer class="final-report-document-footer">Documento emitido em <%= dataEmissao %>.</footer>
+</article>

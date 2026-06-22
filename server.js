@@ -33,6 +33,7 @@ import backupRoutes from './routes/backup.js';
 import peditoriosRoutes from './routes/peditorios.js';
 import securityRoutes from './routes/security.js';
 import festaFinanceRoutes from './routes/festa_finance.js';
+import finalReportRoutes from './routes/final_report.js';
 
 // __dirname em ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -532,6 +533,7 @@ app.use('/', backupRoutes);        // /backup
 app.use('/', peditoriosRoutes);    // /peditorios
 app.use('/', securityRoutes);      // /seguranca/audit
 app.use('/', festaFinanceRoutes);  // /leiloes, /lugares
+app.use('/', finalReportRoutes);    // /resumo-final
 
 // ---- RAIZ -> PAINEL ----
 app.get('/', (_req, res) => res.redirect('/dashboard'));

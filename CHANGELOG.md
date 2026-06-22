@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0]
+### Added
+- Nova página “Resumo Final” com entradas, saídas e saldo preenchidos automaticamente a partir dos dados da aplicação.
+- Campos para período, observações e destino do saldo, com apresentação preparada para impressão em A4 ou gravação em PDF.
+
 ## [1.5.10]
 ### Fixed
 - Impede a regra antiga do menu aberto de anular o formato móvel em duas colunas.

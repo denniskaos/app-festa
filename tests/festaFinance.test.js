@@ -123,6 +123,18 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.equal(dashboardHtml.includes('€ 663.45'), false);
     assert.equal(dashboardHtml.includes('Caixa Total'), false);
 
+    const resumo = await fetch(`${baseUrl}/resumo-final?inicio=2026-01-01&fim=2026-12-31&destino=Pr%C3%B3xima+comiss%C3%A3o`, {
+      headers: { cookie },
+    });
+    assert.equal(resumo.status, 200);
+    const resumoHtml = await resumo.text();
+    assert.ok(resumoHtml.includes('RESUMO FINAL DE CONTAS'));
+    assert.ok(resumoHtml.includes('Donativos da populaÃ§Ã£o'));
+    assert.ok(resumoHtml.includes('LeilÃµes de prendas'));
+    assert.ok(resumoHtml.includes('Venda de lugares'));
+    assert.ok(resumoHtml.includes('163,45'));
+    assert.ok(resumoHtml.includes('PrÃ³xima comissÃ£o'));
+
     const duplicate = await fetch(`${baseUrl}/lugares`, {
       method: 'POST',
       headers: {
