@@ -104,8 +104,9 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.equal(dashboard.status, 200);
     const dashboardHtml = await dashboard.text();
     assert.ok(dashboardHtml.includes('Leilões recebidos'));
-    assert.ok(dashboardHtml.includes('Lugares pagos'));
+    assert.ok(dashboardHtml.includes('Lugares recebidos'));
     assert.ok(dashboardHtml.includes('Lugares em falta'));
+    assert.equal(dashboardHtml.includes('Lugares vendidos'), false);
     assert.ok(dashboardHtml.includes('€ 163.45'));
 
     const duplicate = await fetch(`${baseUrl}/lugares`, {

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2]
+### Changed
+- O Painel mostra nos lugares apenas o valor efetivamente pago, identificado como “Lugares recebidos”.
+- O valor total vendido continua disponível na página de Lugares para calcular o montante em falta.
+
 ## [1.5.1]
 ### Fixed
 - Corrige o número de leilões da festa de quatro para três.
