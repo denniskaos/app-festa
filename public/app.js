@@ -42,12 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const close = () => {
       btn.setAttribute('aria-expanded', 'false');
       nav.classList.remove('open');
+      document.body.classList.remove('menu-open');
     };
 
     btn.addEventListener('click', () => {
       const open = btn.getAttribute('aria-expanded') === 'true';
       btn.setAttribute('aria-expanded', String(!open));
       nav.classList.toggle('open', !open); // precisa de .nav.open no CSS
+      document.body.classList.toggle('menu-open', !open);
     });
 
     // Fechar com ESC e ao voltar a desktop
