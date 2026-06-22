@@ -1,6 +1,6 @@
 {
   "name": "festa-aldeia-app",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "private": true,
   "packageManager": "npm@10.8.2",
   "type": "module",
