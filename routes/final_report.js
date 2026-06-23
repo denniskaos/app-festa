@@ -23,11 +23,34 @@ function formatDate(date) {
   return `${day} / ${month} / ${year}`;
 }
 
+function formatSignatureDate(date) {
+  if (!date) return '____ de ____________________ de 2026';
+  const [year, month, day] = date.split('-');
+  const monthNames = [
+    'janeiro',
+    'fevereiro',
+    'março',
+    'abril',
+    'maio',
+    'junho',
+    'julho',
+    'agosto',
+    'setembro',
+    'outubro',
+    'novembro',
+    'dezembro',
+  ];
+  const monthName = monthNames[Number(month) - 1] || '____________________';
+  return `${Number(day)} de ${monthName} de ${year}`;
+}
+
 function formatMoney(cents) {
   return new Intl.NumberFormat('pt-PT', {
     style: 'currency', currency: 'EUR', minimumFractionDigits: 2,
   }).format((Number(cents) || 0) / 100);
 }
+
+const DEFAULT_AGRADECIMENTO = 'A Comissão de Festas agradece ao Sr. Padre, à Paróquia, à população de Vila Caiz, aos patrocinadores, aos colaboradores, aos voluntários e a todos os que, de alguma forma, contribuíram para a realização da Festa em Honra de Nossa Senhora da Graça 2026.';
 
 function normalize(value) {
   return String(value || '')
@@ -97,7 +120,7 @@ function budgetKey(row) {
     || text.includes('saul')
   ) return 'artistas';
   if (/\bdj\b/.test(text) || text.includes('djs')) return 'djs';
-  if (text.includes('bombo')) return 'bombos';
+  if (text.includes('bombo') || text.includes('concertina')) return 'bombos';
   if (text.includes('iluminacao')) return 'iluminacao';
   if (text.includes('banda')) return 'bandaMusica';
   if (text.includes('rancho')) return 'ranchos';
@@ -166,8 +189,12 @@ router.get('/resumo-final', requireAuth, (req, res, next) => {
 
     const inicio = cleanDate(req.query.inicio);
     const fim = cleanDate(req.query.fim);
+    const assinatura = cleanDate(req.query.assinatura);
     const destino = cleanText(req.query.destino, 500);
     const observacoes = cleanText(req.query.observacoes, 1200);
+    const agradecimento = req.query.agradecimento === undefined
+      ? DEFAULT_AGRADECIMENTO
+      : cleanText(req.query.agradecimento, 1500);
 
     return res.render('resumo_final', {
       title: 'Resumo Final de Contas',
@@ -175,8 +202,11 @@ router.get('/resumo-final', requireAuth, (req, res, next) => {
       fim,
       inicioFormatado: formatDate(inicio),
       fimFormatado: formatDate(fim),
+      assinatura,
+      assinaturaFormatada: formatSignatureDate(assinatura),
       destino,
       observacoes,
+      agradecimento,
       entradas,
       saidas,
       totalEntradas,
