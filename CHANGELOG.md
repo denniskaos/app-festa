@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.3]
+### Fixed
+- Dá prioridade a Camarins, Estadias e Jantares antes de Artistas no Resumo Final, evitando que linhas com Nemanus ou Saúl sejam somadas como cachet artístico.
+
 ## [1.6.2]
 ### Fixed
 - Corrige a distribuição das despesas no Resumo Final para o Bar incluir apenas despesas dos Movimentos.

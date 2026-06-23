@@ -81,6 +81,15 @@ function budgetKey(row) {
   if (text.includes('palco') || text.includes('gerador') || text.includes('vigilante')) return 'palco';
   if (text.includes('pedro artisom') || text.includes('artisom') || (text.includes('som') && text.includes('rua'))) return 'somRua';
   if (text.includes('som') && (text.includes('luz') || text.includes('iluminacao'))) return 'somLuz';
+  if (text.includes('jantar') || text.includes('almoco') || text.includes('refeicao')) return 'jantares';
+  if (text.includes('camarim')) return 'camarins';
+  if (
+    text.includes('estadia')
+    || text.includes('alojamento')
+    || text.includes('hotel')
+    || text.includes('hospedagem')
+    || text.includes('dormida')
+  ) return 'estadias';
   if (
     text.includes('artista')
     || text.includes('nemanus')
@@ -88,10 +97,7 @@ function budgetKey(row) {
     || text.includes('saul')
   ) return 'artistas';
   if (/\bdj\b/.test(text) || text.includes('djs')) return 'djs';
-  if (text.includes('jantar') || text.includes('almoco') || text.includes('refeicao')) return 'jantares';
   if (text.includes('bombo')) return 'bombos';
-  if (text.includes('camarim')) return 'camarins';
-  if (text.includes('estadia') || text.includes('alojamento') || text.includes('hotel')) return 'estadias';
   if (text.includes('iluminacao')) return 'iluminacao';
   if (text.includes('banda')) return 'bandaMusica';
   if (text.includes('rancho')) return 'ranchos';
