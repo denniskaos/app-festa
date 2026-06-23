@@ -82,7 +82,7 @@ function budgetKey(row) {
   if (text.includes('pedro artisom') || text.includes('artisom') || (text.includes('som') && text.includes('rua'))) return 'somRua';
   if (text.includes('som') && (text.includes('luz') || text.includes('iluminacao'))) return 'somLuz';
   if (text.includes('jantar') || text.includes('almoco') || text.includes('refeicao')) return 'jantares';
-  if (text.includes('camarim')) return 'camarins';
+  if (text.includes('camarim') || text.includes('camarin')) return 'camarins';
   if (
     text.includes('estadia')
     || text.includes('alojamento')
