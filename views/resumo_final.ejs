@@ -14,11 +14,17 @@
     <label>Fim do período
       <input type="date" name="fim" value="<%= fim %>">
     </label>
+    <label>Data de assinatura
+      <input type="date" name="assinatura" value="<%= assinatura %>">
+    </label>
     <label class="form-wide">Destino do saldo final
       <textarea name="destino" rows="2" placeholder="Ex.: apoio à paróquia, próxima comissão de festas…"><%= destino %></textarea>
     </label>
     <label class="form-wide">Observações adicionais
       <textarea name="observacoes" rows="3" placeholder="Opcional"><%= observacoes %></textarea>
+    </label>
+    <label class="form-wide">Ponto 6 — Agradecimento
+      <textarea name="agradecimento" rows="4"><%= agradecimento %></textarea>
     </label>
     <div class="form-wide">
       <button class="btn btn-light" type="submit">Atualizar documento</button>
@@ -96,11 +102,11 @@
 
   <section class="report-section">
     <h2>6. Agradecimento</h2>
-    <p>A Comissão de Festas agradece ao Sr. Padre, à Paróquia, à população de Vila Caiz, aos patrocinadores, aos colaboradores, aos voluntários e a todos os que, de alguma forma, contribuíram para a realização da Festa em Honra de Nossa Senhora da Graça 2026.</p>
+    <p class="report-preserve-lines"><%= agradecimento || '____________________________________________________________________' %></p>
   </section>
 
   <section class="report-signatures">
-    <p>Vila Caiz, ____ de ____________________ de 2026</p>
+    <p>Vila Caiz, <%= assinaturaFormatada %></p>
     <div class="signature-lines"><span>A Comissão de Festas</span><span>O Pároco</span></div>
   </section>
 
