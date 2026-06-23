@@ -118,6 +118,7 @@ function budgetKey(row) {
     || text.includes('nemanus')
     || text.includes('canario')
     || text.includes('saul')
+    || text.includes('seabra')
   ) return 'artistas';
   if (/\bdj\b/.test(text) || text.includes('djs')) return 'djs';
   if (text.includes('bombo') || text.includes('concertina')) return 'bombos';
