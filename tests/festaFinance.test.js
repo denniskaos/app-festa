@@ -136,6 +136,7 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(resumoHtml.includes('Venda de lugares'));
     assert.ok(resumoHtml.includes('Jantares/AlmoÃ§os Artistas e Som'));
     assert.ok(resumoHtml.includes('Palco + Gerador + Vigilante'));
+    assert.ok(resumoHtml.includes('Fogo de artifício'));
     assert.ok(resumoHtml.includes('Banda de MÃºsica'));
     assert.ok(resumoHtml.includes('ProcissÃ£o'));
     assert.ok(resumoHtml.includes('163,45'));

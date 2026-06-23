@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.2]
+### Fixed
+- Corrige a distribuição das despesas no Resumo Final para o Bar incluir apenas despesas dos Movimentos.
+- Reconhece no Orçamento as rubricas Artistas, Bombos, Som de Rua, Camarins, Iluminação e Fogo de artifício por nomes reais dos serviços.
+
 ## [1.6.1]
 ### Changed
 - Personaliza as rubricas do Resumo Final com as receitas Peditórios, Bar, Sábado Bombos e Rifas/Malhas.
