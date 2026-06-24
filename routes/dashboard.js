@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { countPendingPasswordResetRequests } from '../lib/passwordReset.js';
 
 const router = Router();
 
@@ -86,6 +87,9 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
   // `var` defensivo aqui evita crash em cenários de merge acidental com redeclaração.
   var desvioOrcamento = saldoFinal - orcamentoTotal;
   var execucaoOrcamentoPct = orcamentoTotal > 0 ? (sumDesp / orcamentoTotal) * 100 : 0;
+  const pendingPasswordResetCount = req.session.user?.role === 'admin'
+    ? countPendingPasswordResetRequests()
+    : 0;
 
   res.render('dashboard', {
     title: 'Painel',
@@ -102,6 +106,7 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
     saldoFinal,
     desvioOrcamento,
     execucaoOrcamentoPct,
+    pendingPasswordResetCount,
     topDesvios,
   });
 });
