@@ -93,8 +93,8 @@ function receiptKey(row) {
   return 'bar';
 }
 
-function budgetKey(row) {
-  const text = normalize(`${row.descricao || ''} ${row.notas || ''}`);
+function expenseKey(row) {
+  const text = normalize(`${row.categoria || ''} ${row.descricao || ''} ${row.descr || ''} ${row.notas || ''}`);
   if (
     text.includes('vitor marinho')
     || text.includes('fogo')
@@ -129,8 +129,8 @@ function budgetKey(row) {
   return null;
 }
 
-function movementExpenseKey() {
-  return 'bar';
+function movementExpenseKey(row) {
+  return expenseKey(row) || 'bar';
 }
 
 router.get('/resumo-final', requireAuth, (req, res, next) => {
@@ -153,12 +153,6 @@ router.get('/resumo-final', requireAuth, (req, res, next) => {
 
     const receitas = sumByKey(movementRows('receita'), receiptKey);
     const despesasMovimentos = sumByKey(movementRows('despesa'), movementExpenseKey);
-    const despesasOrcamento = sumByKey(db.prepare(`
-      SELECT COALESCE(descr, '') AS descricao,
-             COALESCE(notas, '') AS notas,
-             COALESCE(valor_cents, 0) AS valor_cents
-      FROM orcamento_servicos ORDER BY id
-    `).all().map((row) => ({ ...row, valor_cents: Number(row.valor_cents || 0) })), budgetKey);
     const entradas = [
       { descricao: 'Peditórios', valor_cents: totalPeditorios },
       { descricao: 'Patrocínios', valor_cents: totalPatrocinadores },
@@ -169,20 +163,20 @@ router.get('/resumo-final', requireAuth, (req, res, next) => {
       { descricao: 'Venda de lugares', valor_cents: totalLugares },
     ];
     const saidas = [
-      { descricao: 'Artistas', valor_cents: despesasOrcamento.artistas || 0 },
-      { descricao: 'DJs', valor_cents: despesasOrcamento.djs || 0 },
-      { descricao: 'Jantares/Almoços Artistas e Som', valor_cents: despesasOrcamento.jantares || 0 },
-      { descricao: 'Bombos', valor_cents: despesasOrcamento.bombos || 0 },
-      { descricao: 'Som de Rua', valor_cents: despesasOrcamento.somRua || 0 },
-      { descricao: 'Som + Luz', valor_cents: despesasOrcamento.somLuz || 0 },
-      { descricao: 'Palco + Gerador + Vigilante', valor_cents: despesasOrcamento.palco || 0 },
-      { descricao: 'Camarins', valor_cents: despesasOrcamento.camarins || 0 },
-      { descricao: 'Estadias', valor_cents: despesasOrcamento.estadias || 0 },
-      { descricao: 'Iluminação', valor_cents: despesasOrcamento.iluminacao || 0 },
-      { descricao: 'Fogo de artifício', valor_cents: despesasOrcamento.fogoArtificio || 0 },
-      { descricao: 'Banda de Música', valor_cents: despesasOrcamento.bandaMusica || 0 },
-      { descricao: 'Ranchos', valor_cents: despesasOrcamento.ranchos || 0 },
-      { descricao: 'Procissão', valor_cents: despesasOrcamento.procissao || 0 },
+      { descricao: 'Artistas', valor_cents: despesasMovimentos.artistas || 0 },
+      { descricao: 'DJs', valor_cents: despesasMovimentos.djs || 0 },
+      { descricao: 'Jantares/Almoços Artistas e Som', valor_cents: despesasMovimentos.jantares || 0 },
+      { descricao: 'Bombos', valor_cents: despesasMovimentos.bombos || 0 },
+      { descricao: 'Som de Rua', valor_cents: despesasMovimentos.somRua || 0 },
+      { descricao: 'Som + Luz', valor_cents: despesasMovimentos.somLuz || 0 },
+      { descricao: 'Palco + Gerador + Vigilante', valor_cents: despesasMovimentos.palco || 0 },
+      { descricao: 'Camarins', valor_cents: despesasMovimentos.camarins || 0 },
+      { descricao: 'Estadias', valor_cents: despesasMovimentos.estadias || 0 },
+      { descricao: 'Iluminação', valor_cents: despesasMovimentos.iluminacao || 0 },
+      { descricao: 'Fogo de artifício', valor_cents: despesasMovimentos.fogoArtificio || 0 },
+      { descricao: 'Banda de Música', valor_cents: despesasMovimentos.bandaMusica || 0 },
+      { descricao: 'Ranchos', valor_cents: despesasMovimentos.ranchos || 0 },
+      { descricao: 'Procissão', valor_cents: despesasMovimentos.procissao || 0 },
       { descricao: 'Bar', valor_cents: despesasMovimentos.bar || 0 },
     ];
     const totalEntradas = entradas.reduce((sum, row) => sum + row.valor_cents, 0);
