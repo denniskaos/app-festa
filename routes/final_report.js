@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { requireRole } from '../middleware/roles.js';
 
 const router = Router();
 
@@ -77,6 +78,14 @@ function rowText(row) {
   return normalize(`${row.categoria || ''} ${row.descricao || ''}`);
 }
 
+function hasWord(text, word) {
+  return new RegExp(`\\b${word}\\b`).test(text);
+}
+
+function hasAnyWord(text, words) {
+  return words.some((word) => hasWord(text, word));
+}
+
 function sumByKey(rows, classify) {
   return rows.reduce((totals, row) => {
     const key = classify(row);
@@ -95,16 +104,20 @@ function receiptKey(row) {
 
 function expenseKey(row) {
   const text = normalize(`${row.categoria || ''} ${row.descricao || ''} ${row.descr || ''} ${row.notas || ''}`);
+  const artistRelated = hasAnyWord(text, ['artista', 'artistas', 'nemanus', 'canario', 'saul', 'seabra']);
   if (
     text.includes('vitor marinho')
-    || text.includes('fogo')
-    || text.includes('artificio')
+    || text.includes('fogo artificio')
+    || text.includes('fogo de artificio')
     || text.includes('pirotecnia')
   ) return 'fogoArtificio';
   if (text.includes('palco') || text.includes('gerador') || text.includes('vigilante')) return 'palco';
   if (text.includes('pedro artisom') || text.includes('artisom') || (text.includes('som') && text.includes('rua'))) return 'somRua';
   if (text.includes('som') && (text.includes('luz') || text.includes('iluminacao'))) return 'somLuz';
-  if (text.includes('jantar') || text.includes('almoco') || text.includes('refeicao')) return 'jantares';
+  if (
+    (text.includes('jantar') || text.includes('almoco') || text.includes('refeicao'))
+    && (artistRelated || hasWord(text, 'som'))
+  ) return 'jantares';
   if (text.includes('camarim') || text.includes('camarin')) return 'camarins';
   if (
     text.includes('estadia')
@@ -113,13 +126,7 @@ function expenseKey(row) {
     || text.includes('hospedagem')
     || text.includes('dormida')
   ) return 'estadias';
-  if (
-    text.includes('artista')
-    || text.includes('nemanus')
-    || text.includes('canario')
-    || text.includes('saul')
-    || text.includes('seabra')
-  ) return 'artistas';
+  if (artistRelated) return 'artistas';
   if (/\bdj\b/.test(text) || text.includes('djs')) return 'djs';
   if (text.includes('bombo') || text.includes('concertina')) return 'bombos';
   if (text.includes('iluminacao')) return 'iluminacao';
@@ -133,7 +140,7 @@ function movementExpenseKey(row) {
   return expenseKey(row) || 'bar';
 }
 
-router.get('/resumo-final', requireAuth, (req, res, next) => {
+router.get('/resumo-final', requireAuth, requireRole('admin'), (req, res, next) => {
   try {
     const totalPeditorios = total(`
       SELECT COALESCE(SUM(COALESCE(valor_entregue_cents, valor_cents, 0)), 0) AS n
