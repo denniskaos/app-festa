@@ -53,7 +53,13 @@
           <% if (role === 'admin') { %>
             <a href="/resumo-final">Resumo Final</a>
             <a href="/utilizadores">Utilizadores</a>
-            <a href="/seguranca/password-resets">Recuperações</a>
+            <a href="/seguranca/password-resets">
+              Recuperações
+              <% const resetBadgeCount = typeof pendingPasswordResetCount !== 'undefined' ? pendingPasswordResetCount : 0; %>
+              <% if (resetBadgeCount > 0) { %>
+                <span class="badge"><%= resetBadgeCount %></span>
+              <% } %>
+            </a>
             <a href="/seguranca/audit">Segurança</a>
           <% } %>
 
