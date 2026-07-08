@@ -100,6 +100,18 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(lugaresHtml.includes('Mesa 3 - Lugar 2'));
     assert.ok(lugaresHtml.includes('€ 60.00'));
 
+    const applyRodizio = await fetch(`${baseUrl}/casais/rodizio/aplicar`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ casal_id: '1', valor: '160' }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(applyRodizio.status, 302);
+    assert.match(applyRodizio.headers.get('location') || '', /Aplicação\+registada/);
+
     const updateCasal = await fetch(`${baseUrl}/casais/1`, {
       method: 'POST',
       headers: {
