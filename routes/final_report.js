@@ -132,6 +132,7 @@ function expenseKey(row) {
   if (text.includes('iluminacao')) return 'iluminacao';
   if (text.includes('banda')) return 'bandaMusica';
   if (text.includes('rancho')) return 'ranchos';
+  if (text.includes('cavalo') && (text.includes('procissao') || text.includes('procisao'))) return 'cavalosProcissao';
   if (text.includes('procissao') || text.includes('procisao')) return 'procissao';
   return null;
 }
@@ -183,6 +184,7 @@ router.get('/resumo-final', requireAuth, requireRole('admin'), (req, res, next) 
       { descricao: 'Fogo de artifício', valor_cents: despesasMovimentos.fogoArtificio || 0 },
       { descricao: 'Banda de Música', valor_cents: despesasMovimentos.bandaMusica || 0 },
       { descricao: 'Ranchos', valor_cents: despesasMovimentos.ranchos || 0 },
+      { descricao: 'Cavalos Procissão', valor_cents: despesasMovimentos.cavalosProcissao || 0 },
       { descricao: 'Procissão', valor_cents: despesasMovimentos.procissao || 0 },
       { descricao: 'Bar', valor_cents: despesasMovimentos.bar || 0 },
     ];
