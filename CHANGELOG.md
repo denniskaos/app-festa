@@ -2,9 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.7.0]
 ### Added
 - Acrescenta a despesa “Cavalos Procissão” ao Resumo Final e separa-a das restantes despesas da procissão.
+
+### Security
+- Impede que os endpoints GET de lançamento de jantares alterem movimentos e ativa CSRF estrito no Render.
+- Atualiza dependências de segurança, remove a dependência `xlsx`, que não era utilizada, e substitui o antigo armazenamento de sessões por uma implementação baseada em `better-sqlite3`.
 
 ## [1.6.3]
 ### Fixed

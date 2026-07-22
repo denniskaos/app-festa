@@ -25,6 +25,8 @@ services:
         value: https://app-festa-1.onrender.com
       - key: SESSION_SECRET
         generateValue: true
+      - key: STRICT_CSRF
+        value: 1
       - key: TZ                   # logs/horários coerentes
         value: Europe/Lisbon
 
