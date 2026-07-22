@@ -110,7 +110,10 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
       redirect: 'manual',
     });
     assert.equal(applyRodizio.status, 302);
-    assert.match(applyRodizio.headers.get('location') || '', /Aplicação\+registada/);
+    const applyRodizioLocation = decodeURIComponent(
+      (applyRodizio.headers.get('location') || '').replace(/\+/g, ' '),
+    );
+    assert.match(applyRodizioLocation, /Aplicação registada/);
 
     const updateCasal = await fetch(`${baseUrl}/casais/1`, {
       method: 'POST',
@@ -135,24 +138,42 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.equal(dashboardHtml.includes('€ 663.45'), false);
     assert.equal(dashboardHtml.includes('Caixa Total'), false);
 
+    const createCavalosExpense = await fetch(`${baseUrl}/movimentos`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        dt: '2026-08-02',
+        type: 'despesa',
+        descr: 'Cavalos Procissão',
+        valor: '321,45',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(createCavalosExpense.status, 302);
+
     const resumo = await fetch(`${baseUrl}/resumo-final?inicio=2026-01-01&fim=2026-12-31&destino=Pr%C3%B3xima+comiss%C3%A3o`, {
       headers: { cookie },
     });
     assert.equal(resumo.status, 200);
     const resumoHtml = await resumo.text();
     assert.ok(resumoHtml.includes('RESUMO FINAL DE CONTAS'));
-    assert.ok(resumoHtml.includes('PeditÃ³rios'));
-    assert.ok(resumoHtml.includes('SÃ¡bado Bombos'));
+    assert.ok(resumoHtml.includes('Peditórios'));
+    assert.ok(resumoHtml.includes('Sábado Bombos'));
     assert.ok(resumoHtml.includes('Rifas/Malhas'));
-    assert.ok(resumoHtml.includes('LeilÃµes de prendas'));
+    assert.ok(resumoHtml.includes('Leilões de prendas'));
     assert.ok(resumoHtml.includes('Venda de lugares'));
-    assert.ok(resumoHtml.includes('Jantares/AlmoÃ§os Artistas e Som'));
+    assert.ok(resumoHtml.includes('Jantares/Almoços Artistas e Som'));
     assert.ok(resumoHtml.includes('Palco + Gerador + Vigilante'));
     assert.ok(resumoHtml.includes('Fogo de artifício'));
-    assert.ok(resumoHtml.includes('Banda de MÃºsica'));
-    assert.ok(resumoHtml.includes('ProcissÃ£o'));
+    assert.ok(resumoHtml.includes('Banda de Música'));
+    assert.ok(resumoHtml.includes('Cavalos Procissão'));
+    assert.ok(resumoHtml.includes('321,45'));
+    assert.ok(resumoHtml.includes('Procissão'));
     assert.ok(resumoHtml.includes('163,45'));
-    assert.ok(resumoHtml.includes('PrÃ³xima comissÃ£o'));
+    assert.ok(resumoHtml.includes('Próxima comissão'));
 
     const duplicate = await fetch(`${baseUrl}/lugares`, {
       method: 'POST',
