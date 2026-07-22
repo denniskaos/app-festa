@@ -441,11 +441,18 @@ function handleLancar(req, res, next) {
 
 // Endpoints primários
 router.post('/jantares/:id/lancar', requireAuth, handleLancar);
-router.get('/jantares/:id/lancar', requireAuth, handleLancar);
 
 // Aliases (compat): /despesas/lancar
 router.post('/jantares/:id/despesas/lancar', requireAuth, handleLancar);
-router.get('/jantares/:id/despesas/lancar', requireAuth, handleLancar);
+
+// Os antigos endpoints GET alteravam dados sem a proteção CSRF aplicada a pedidos
+// de escrita. Mantemos uma resposta explícita para não executar a operação.
+const launchMethodNotAllowed = (_req, res) => {
+  res.set('Allow', 'POST');
+  return res.status(405).type('text').send('Método não permitido. Usa o formulário da aplicação.');
+};
+router.get('/jantares/:id/lancar', requireAuth, launchMethodNotAllowed);
+router.get('/jantares/:id/despesas/lancar', requireAuth, launchMethodNotAllowed);
 
 router.post('/jantares/:id/reabrir', requireAuth, (req, res, next) => {
   try {

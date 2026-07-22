@@ -10,7 +10,7 @@ import os from 'os';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import ExcelJS from 'exceljs';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 
 const router = Router();
 
@@ -366,7 +366,7 @@ router.get('/backup/export/all-csv.zip', requireAuth, async (_req, res) => {
     `attachment; filename="csv-todos-${new Date().toISOString().slice(0, 10)}.zip"`
   );
 
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const archive = new ZipArchive({ zlib: { level: 9 } });
   archive.on('error', (err) => {
     throw err;
   });

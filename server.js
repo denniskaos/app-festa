@@ -4,7 +4,6 @@ import expressLayouts from 'express-ejs-layouts';
 import session from 'express-session';
 import helmet from 'helmet';
 import compression from 'compression';
-import SQLiteStoreFactory from 'connect-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { createHash } from 'crypto';
@@ -17,6 +16,7 @@ import { readOnlyForViewers } from './middleware/roles.js';
 import { ensureCsrfToken, sameOriginGuard, verifyCsrfToken } from './lib/security.js';
 import { logger } from './lib/logger.js';
 import { purgeAuthAuditOlderThan } from './lib/audit.js';
+import { BetterSQLiteSessionStore } from './lib/session_store.js';
 
 // Rotas
 import authRoutes from './routes/auth.js';
@@ -131,16 +131,12 @@ app.use((req, res, next) => {
 });
 
 // ---- SESSÃO (persistente) ----
-const SQLiteStore = SQLiteStoreFactory(session);
 app.use(
   session({
     secret: EFFECTIVE_SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    store: new SQLiteStore({
-      dir: path.dirname(SESSIONS_DB),
-      db: path.basename(SESSIONS_DB), // p.ex. sessions.sqlite
-    }),
+    store: new BetterSQLiteSessionStore({ filename: SESSIONS_DB }),
     cookie: {
       httpOnly: true,
       sameSite: 'lax',

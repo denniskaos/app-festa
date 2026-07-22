@@ -53,6 +53,15 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     const cookie = register.headers.get('set-cookie') || '';
     assert.ok(cookie.includes('connect.sid='));
 
+    for (const pathName of ['/jantares/1/lancar', '/jantares/1/despesas/lancar']) {
+      const legacyLaunch = await fetch(`${baseUrl}${pathName}`, {
+        headers: { cookie },
+        redirect: 'manual',
+      });
+      assert.equal(legacyLaunch.status, 405);
+      assert.equal(legacyLaunch.headers.get('allow'), 'POST');
+    }
+
     const leiloesBefore = await fetch(`${baseUrl}/leiloes`, { headers: { cookie } });
     assert.equal(leiloesBefore.status, 200);
     const leiloesBeforeHtml = await leiloesBefore.text();
