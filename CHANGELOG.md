@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+- Acrescenta a despesa “Cavalos Procissão” ao Resumo Final e separa-a das restantes despesas da procissão.
+
 ## [1.6.3]
 ### Fixed
 - Dá prioridade a Camarins, Estadias e Jantares antes de Artistas no Resumo Final, evitando que linhas com Nemanus ou Saúl sejam somadas como cachet artístico.
