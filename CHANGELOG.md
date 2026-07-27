@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.2]
+### Added
+- A página de Lugares apresenta separadamente os totais dos lugares de cima e dos lugares de baixo.
+
 ## [1.7.1]
 ### Added
 - A página de Peditórios apresenta os totais prometido, entregue e em falta de cada grupo.

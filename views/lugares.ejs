@@ -18,6 +18,14 @@
     <div class="stat-label">Total em falta</div>
     <div class="stat-number">€ <%= euros(totals.emFalta) %></div>
   </article>
+  <article class="card">
+    <div class="stat-label">Total lugares de cima</div>
+    <div class="stat-number">€ <%= euros(zoneTotals.cima) %></div>
+  </article>
+  <article class="card">
+    <div class="stat-label">Total lugares de baixo</div>
+    <div class="stat-number">€ <%= euros(zoneTotals.baixo) %></div>
+  </article>
 </section>
 
 <% if (error) { %><div class="alert"><%= error %></div><% } %>

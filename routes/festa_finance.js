@@ -94,13 +94,28 @@ function vendasSummary(rows) {
   }), { total: 0, pago: 0, emFalta: 0 });
 }
 
+function vendasPorZonaSummary(rows) {
+  return rows.reduce((totals, row) => {
+    const lugar = String(row.lugar || '').toLocaleLowerCase('pt-PT');
+    if (/\bcima\b/u.test(lugar)) totals.cima += row.valor_total_cents;
+    if (/\bbaixo\b/u.test(lugar)) totals.baixo += row.valor_total_cents;
+    return totals;
+  }, { cima: 0, baixo: 0 });
+}
+
 function renderLugares(res, {
   status = 200, error = null, msg = null, values = {},
 } = {}) {
   const vendas = listVendasLugares();
   return res.status(status).render('lugares', {
-    title: 'Venda de lugares', vendas, totals: vendasSummary(vendas),
-    euros, error, msg, values,
+    title: 'Venda de lugares',
+    vendas,
+    totals: vendasSummary(vendas),
+    zoneTotals: vendasPorZonaSummary(vendas),
+    euros,
+    error,
+    msg,
+    values,
   });
 }
 
