@@ -20,11 +20,27 @@
   </article>
   <article class="card">
     <div class="stat-label">Total lugares de cima</div>
-    <div class="stat-number">€ <%= euros(zoneTotals.cima) %></div>
+    <div class="stat-number">€ <%= euros(zoneTotals.cima.total) %></div>
+  </article>
+  <article class="card">
+    <div class="stat-label">Pago — lugares de cima</div>
+    <div class="stat-number">€ <%= euros(zoneTotals.cima.pago) %></div>
+  </article>
+  <article class="card">
+    <div class="stat-label">Em falta — lugares de cima</div>
+    <div class="stat-number">€ <%= euros(zoneTotals.cima.emFalta) %></div>
   </article>
   <article class="card">
     <div class="stat-label">Total lugares de baixo</div>
-    <div class="stat-number">€ <%= euros(zoneTotals.baixo) %></div>
+    <div class="stat-number">€ <%= euros(zoneTotals.baixo.total) %></div>
+  </article>
+  <article class="card">
+    <div class="stat-label">Pago — lugares de baixo</div>
+    <div class="stat-number">€ <%= euros(zoneTotals.baixo.pago) %></div>
+  </article>
+  <article class="card">
+    <div class="stat-label">Em falta — lugares de baixo</div>
+    <div class="stat-number">€ <%= euros(zoneTotals.baixo.emFalta) %></div>
   </article>
 </section>
 
