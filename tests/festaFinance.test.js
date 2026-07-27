@@ -184,6 +184,56 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(resumoHtml.includes('163,45'));
     assert.ok(resumoHtml.includes('Próxima comissão'));
 
+    const peditorios = [
+      {
+        nome_pessoa: 'Ana',
+        local: 'Vila Caiz',
+        equipa: 'Grupo Azul',
+        valor_prometido: '100',
+        valor_entregue: '80',
+      },
+      {
+        nome_pessoa: 'Bruno',
+        local: 'Vila Caiz',
+        equipa: 'grupo azul',
+        valor_prometido: '50',
+        valor_entregue: '50',
+      },
+      {
+        nome_pessoa: 'Carla',
+        local: 'Vila Caiz',
+        equipa: 'Grupo Dourado',
+        valor_prometido: '75',
+        valor_entregue: '25',
+      },
+    ];
+
+    for (const peditorio of peditorios) {
+      const createPeditorio = await fetch(`${baseUrl}/peditorios`, {
+        method: 'POST',
+        headers: {
+          cookie,
+          origin: baseUrl,
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(peditorio).toString(),
+        redirect: 'manual',
+      });
+      assert.equal(createPeditorio.status, 302);
+    }
+
+    const peditoriosPage = await fetch(`${baseUrl}/peditorios`, { headers: { cookie } });
+    assert.equal(peditoriosPage.status, 200);
+    const peditoriosHtml = (await peditoriosPage.text()).replace(/\s+/g, ' ');
+    assert.match(
+      peditoriosHtml,
+      /Grupo Azul<\/td> <td data-label="Prometido \(€\)">€ 150\.00<\/td> <td data-label="Entregue \(€\)">€ 130\.00<\/td> <td data-label="Em falta \(€\)">€ 20\.00<\/td>/,
+    );
+    assert.match(
+      peditoriosHtml,
+      /Grupo Dourado<\/td> <td data-label="Prometido \(€\)">€ 75\.00<\/td> <td data-label="Entregue \(€\)">€ 25\.00<\/td> <td data-label="Em falta \(€\)">€ 50\.00<\/td>/,
+    );
+
     const duplicate = await fetch(`${baseUrl}/lugares`, {
       method: 'POST',
       headers: {
