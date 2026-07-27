@@ -97,10 +97,22 @@ function vendasSummary(rows) {
 function vendasPorZonaSummary(rows) {
   return rows.reduce((totals, row) => {
     const lugar = String(row.lugar || '').toLocaleLowerCase('pt-PT');
-    if (/\bcima\b/u.test(lugar)) totals.cima += row.valor_total_cents;
-    if (/\bbaixo\b/u.test(lugar)) totals.baixo += row.valor_total_cents;
+    const zona = /\bcima\b/u.test(lugar)
+      ? totals.cima
+      : /\bbaixo\b/u.test(lugar)
+        ? totals.baixo
+        : null;
+
+    if (zona) {
+      zona.total += row.valor_total_cents;
+      zona.pago += row.valor_pago_cents;
+      zona.emFalta += row.valor_em_falta_cents;
+    }
     return totals;
-  }, { cima: 0, baixo: 0 });
+  }, {
+    cima: { total: 0, pago: 0, emFalta: 0 },
+    baixo: { total: 0, pago: 0, emFalta: 0 },
+  });
 }
 
 function renderLugares(res, {
