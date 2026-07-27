@@ -271,7 +271,23 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     );
     assert.match(
       lugaresPorZonaHtml,
+      /Pago — lugares de cima<\/div> <div class="stat-number">€ 150\.00<\/div>/,
+    );
+    assert.match(
+      lugaresPorZonaHtml,
+      /Em falta — lugares de cima<\/div> <div class="stat-number">€ 0\.00<\/div>/,
+    );
+    assert.match(
+      lugaresPorZonaHtml,
       /Total lugares de baixo<\/div> <div class="stat-number">€ 75\.00<\/div>/,
+    );
+    assert.match(
+      lugaresPorZonaHtml,
+      /Pago — lugares de baixo<\/div> <div class="stat-number">€ 25\.00<\/div>/,
+    );
+    assert.match(
+      lugaresPorZonaHtml,
+      /Em falta — lugares de baixo<\/div> <div class="stat-number">€ 50\.00<\/div>/,
     );
 
     const duplicate = await fetch(`${baseUrl}/lugares`, {
