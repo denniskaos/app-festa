@@ -92,7 +92,7 @@ const migrate = db.transaction(() => {
     );
 
     CREATE TABLE IF NOT EXISTS leiloes (
-      numero INTEGER PRIMARY KEY CHECK (numero BETWEEN 1 AND 3),
+      numero INTEGER PRIMARY KEY CHECK (numero BETWEEN 1 AND 4),
       dt TEXT,
       valor_recebido_cents INTEGER NOT NULL DEFAULT 0 CHECK (valor_recebido_cents >= 0)
     );
@@ -157,9 +157,31 @@ const migrate = db.transaction(() => {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_password_reset_requests_status ON password_reset_requests(status, requested_at);`);
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_requests_pending_user ON password_reset_requests(user_id) WHERE status='pending';`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_vendas_lugares_nome ON vendas_lugares(nome COLLATE NOCASE);`);
-  db.prepare(`DELETE FROM leiloes WHERE numero > 3`).run();
+
+  // A tabela antiga aceitava apenas os leilões 1 a 3. Recria-a sem perder
+  // valores para acrescentar o Leilão da Mota como quarto registo fixo.
+  const leiloesSql = db.prepare(`
+    SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'leiloes'
+  `).get()?.sql || '';
+  if (!/BETWEEN\s+1\s+AND\s+4/i.test(leiloesSql)) {
+    db.exec(`
+      ALTER TABLE leiloes RENAME TO leiloes_anteriores;
+      CREATE TABLE leiloes (
+        numero INTEGER PRIMARY KEY CHECK (numero BETWEEN 1 AND 4),
+        dt TEXT,
+        valor_recebido_cents INTEGER NOT NULL DEFAULT 0 CHECK (valor_recebido_cents >= 0)
+      );
+      INSERT INTO leiloes (numero, dt, valor_recebido_cents)
+      SELECT numero, dt, valor_recebido_cents
+      FROM leiloes_anteriores
+      WHERE numero BETWEEN 1 AND 4;
+      DROP TABLE leiloes_anteriores;
+    `);
+  }
+
+  db.prepare(`DELETE FROM leiloes WHERE numero > 4`).run();
   const insertLeilao = db.prepare(`INSERT OR IGNORE INTO leiloes (numero) VALUES (?)`);
-  for (let numero = 1; numero <= 3; numero += 1) insertLeilao.run(numero);
+  for (let numero = 1; numero <= 4; numero += 1) insertLeilao.run(numero);
 
   // --- Organização de jantares: Mesas & Convidados ---
   db.exec(`

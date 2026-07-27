@@ -71,7 +71,7 @@ router.get(['/dashboard', '/'], requireAuth, (req, res) => {
   const totalLeiloes = getInt(`
     SELECT COALESCE(SUM(valor_recebido_cents), 0) AS n
     FROM leiloes
-    WHERE numero BETWEEN 1 AND 3
+    WHERE numero BETWEEN 1 AND 4
   `);
 
   // Venda de lugares: apenas o montante efetivamente recebido

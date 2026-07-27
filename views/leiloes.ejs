@@ -1,7 +1,7 @@
 <div class="toolbar">
   <div>
     <h1>Leilões</h1>
-    <p class="muted">Registo dos três leilões da festa.</p>
+    <p class="muted">Registo dos três leilões de prendas e do Leilão da Mota.</p>
   </div>
 </div>
 
@@ -28,7 +28,7 @@
     <tbody>
       <% leiloes.forEach(leilao => { %>
         <tr>
-          <td><strong>Leilão <%= leilao.numero %></strong></td>
+          <td><strong><%= leilao.nome %></strong></td>
           <td>
             <input type="date" name="dt" value="<%= leilao.dt %>"
                    form="leilao-<%= leilao.numero %>" <%= user?.role === 'viewer' ? 'disabled' : '' %> />

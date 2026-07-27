@@ -68,6 +68,7 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     for (let numero = 1; numero <= 3; numero += 1) {
       assert.ok(leiloesBeforeHtml.includes(`Leilão ${numero}`));
     }
+    assert.ok(leiloesBeforeHtml.includes('Leilão da Mota'));
     assert.equal(leiloesBeforeHtml.includes('Leilão 4'), false);
 
     const updateLeilao = await fetch(`${baseUrl}/leiloes/1`, {
@@ -81,10 +82,27 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     });
     assert.equal(updateLeilao.status, 302);
 
+    const updateLeilaoMota = await fetch(`${baseUrl}/leiloes/4`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ dt: '2026-07-25', valor_recebido: '250' }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(updateLeilaoMota.status, 302);
+    assert.ok(decodeURIComponent(updateLeilaoMota.headers.get('location') || '').includes(
+      'Leilão da Mota atualizado.',
+    ));
+
     const leiloesAfter = await fetch(`${baseUrl}/leiloes`, { headers: { cookie } });
     const leiloesAfterHtml = await leiloesAfter.text();
     assert.ok(leiloesAfterHtml.includes('2026-07-12'));
+    assert.ok(leiloesAfterHtml.includes('2026-07-25'));
     assert.ok(leiloesAfterHtml.includes('123.45'));
+    assert.ok(leiloesAfterHtml.includes('250.00'));
+    assert.ok(leiloesAfterHtml.includes('373.45'));
 
     const createVenda = await fetch(`${baseUrl}/lugares`, {
       method: 'POST',
@@ -142,7 +160,7 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(dashboardHtml.includes('Lugares recebidos'));
     assert.equal(dashboardHtml.includes('Lugares em falta'), false);
     assert.equal(dashboardHtml.includes('Lugares vendidos'), false);
-    assert.ok(dashboardHtml.includes('€ 163.45'));
+    assert.ok(dashboardHtml.includes('€ 413.45'));
     assert.ok(dashboardHtml.includes('€ 500.00'));
     assert.equal(dashboardHtml.includes('€ 663.45'), false);
     assert.equal(dashboardHtml.includes('Caixa Total'), false);
@@ -172,7 +190,7 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(resumoHtml.includes('Peditórios'));
     assert.ok(resumoHtml.includes('Sábado Bombos'));
     assert.ok(resumoHtml.includes('Rifas/Malhas'));
-    assert.ok(resumoHtml.includes('Leilões de prendas'));
+    assert.ok(resumoHtml.includes('Leilões'));
     assert.ok(resumoHtml.includes('Venda de lugares'));
     assert.ok(resumoHtml.includes('Jantares/Almoços Artistas e Som'));
     assert.ok(resumoHtml.includes('Palco + Gerador + Vigilante'));
@@ -181,7 +199,8 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(resumoHtml.includes('Cavalos Procissão'));
     assert.ok(resumoHtml.includes('321,45'));
     assert.ok(resumoHtml.includes('Procissão'));
-    assert.ok(resumoHtml.includes('163,45'));
+    assert.ok(resumoHtml.includes('373,45'));
+    assert.ok(resumoHtml.includes('413,45'));
     assert.ok(resumoHtml.includes('Próxima comissão'));
 
     const peditorios = [
