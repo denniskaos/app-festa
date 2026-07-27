@@ -234,6 +234,46 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
       /Grupo Dourado<\/td> <td data-label="Prometido \(€\)">€ 75\.00<\/td> <td data-label="Entregue \(€\)">€ 25\.00<\/td> <td data-label="Em falta \(€\)">€ 50\.00<\/td>/,
     );
 
+    const vendasPorZona = [
+      {
+        nome: 'Comprador Cima',
+        lugar: 'Bancada Cima 1',
+        valor_total: '150',
+        valor_pago: '150',
+      },
+      {
+        nome: 'Comprador Baixo',
+        lugar: 'Bancada Baixo 1',
+        valor_total: '75',
+        valor_pago: '25',
+      },
+    ];
+
+    for (const venda of vendasPorZona) {
+      const createVendaPorZona = await fetch(`${baseUrl}/lugares`, {
+        method: 'POST',
+        headers: {
+          cookie,
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(venda).toString(),
+        redirect: 'manual',
+      });
+      assert.equal(createVendaPorZona.status, 302);
+    }
+
+    const lugaresPorZonaPage = await fetch(`${baseUrl}/lugares`, { headers: { cookie } });
+    assert.equal(lugaresPorZonaPage.status, 200);
+    const lugaresPorZonaHtml = (await lugaresPorZonaPage.text()).replace(/\s+/g, ' ');
+    assert.match(
+      lugaresPorZonaHtml,
+      /Total lugares de cima<\/div> <div class="stat-number">€ 150\.00<\/div>/,
+    );
+    assert.match(
+      lugaresPorZonaHtml,
+      /Total lugares de baixo<\/div> <div class="stat-number">€ 75\.00<\/div>/,
+    );
+
     const duplicate = await fetch(`${baseUrl}/lugares`, {
       method: 'POST',
       headers: {
