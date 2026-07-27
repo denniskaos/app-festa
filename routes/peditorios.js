@@ -19,11 +19,34 @@ router.get('/peditorios', requireAuth, (req, res) => {
   const total_valor_prometido_cents = rows.reduce((s, r) => s + (r.valor_prometido_cents || 0), 0);
   const total_valor_entregue_cents = rows.reduce((s, r) => s + (r.valor_entregue_cents || 0), 0);
   const total_valor_falta_cents = total_valor_prometido_cents - total_valor_entregue_cents;
+  const gruposPorNome = new Map();
+
+  // Percorre do registo mais antigo para o mais recente para conservar a grafia
+  // original do nome do grupo quando existem diferenças apenas de maiúsculas.
+  for (const row of [...rows].reverse()) {
+    const nome = String(row.equipa || '').trim() || 'Sem grupo';
+    const chave = nome.toLocaleLowerCase('pt-PT');
+    const grupo = gruposPorNome.get(chave) || {
+      nome,
+      valor_prometido_cents: 0,
+      valor_entregue_cents: 0,
+      valor_falta_cents: 0
+    };
+
+    grupo.valor_prometido_cents += row.valor_prometido_cents || 0;
+    grupo.valor_entregue_cents += row.valor_entregue_cents || 0;
+    grupo.valor_falta_cents = grupo.valor_prometido_cents - grupo.valor_entregue_cents;
+    gruposPorNome.set(chave, grupo);
+  }
+
+  const grupos = [...gruposPorNome.values()]
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-PT', { sensitivity: 'base' }));
 
   res.render('peditorios', {
     title: 'Peditórios',
     user: req.session.user,
     itens: rows,
+    grupos,
     total_valor_prometido_cents,
     total_valor_entregue_cents,
     total_valor_falta_cents

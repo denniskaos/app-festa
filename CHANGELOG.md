@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.1]
+### Added
+- A página de Peditórios apresenta os totais prometido, entregue e em falta de cada grupo.
+
 ## [1.7.0]
 ### Added
 - Acrescenta a despesa “Cavalos Procissão” ao Resumo Final e separa-a das restantes despesas da procissão.
