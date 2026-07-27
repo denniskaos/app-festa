@@ -4,7 +4,7 @@
 Inclui: Login, Painel, Cronograma, Importação CSV, **Orçamento** (linhas), Movimentos, Patrocinadores, Peditórios, Leilões, Venda de Lugares e Backup/Export.
 
 ### Leilões e lugares
-- `/leiloes`: três leilões fixos, cada um com data e valor recebido.
+- `/leiloes`: três leilões de prendas e o Leilão da Mota, cada um com data e valor recebido; o Resumo Final soma os quatro na receita “Leilões”.
 - `/lugares`: registo do comprador, lugar, valor total e valor pago; os totais, os valores pagos e os valores em falta dos lugares de cima e de baixo são calculados automaticamente.
 - Contas `viewer` podem consultar estas páginas, mas não alterar dados.
 

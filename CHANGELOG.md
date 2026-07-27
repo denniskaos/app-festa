@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.3]
+### Added
+- Acrescenta o “Leilão da Mota” à página de Leilões e inclui o respetivo valor na receita “Leilões” do Resumo Final.
+
 ## [1.7.2]
 ### Added
 - A página de Lugares apresenta separadamente os valores totais, pagos e em falta dos lugares de cima e dos lugares de baixo.

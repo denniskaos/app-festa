@@ -153,7 +153,7 @@ router.get('/resumo-final', requireAuth, requireRole('admin'), (req, res, next) 
     `);
     const totalLeiloes = total(`
       SELECT COALESCE(SUM(valor_recebido_cents), 0) AS n
-      FROM leiloes WHERE numero BETWEEN 1 AND 3
+      FROM leiloes WHERE numero BETWEEN 1 AND 4
     `);
     const totalLugares = total(`
       SELECT COALESCE(SUM(valor_pago_cents), 0) AS n FROM vendas_lugares
@@ -167,7 +167,7 @@ router.get('/resumo-final', requireAuth, requireRole('admin'), (req, res, next) 
       { descricao: 'Bar', valor_cents: receitas.bar || 0 },
       { descricao: 'Sábado Bombos', valor_cents: receitas.sabadoBombos || 0 },
       { descricao: 'Rifas/Malhas', valor_cents: receitas.rifasMalhas || 0 },
-      { descricao: 'Leilões de prendas', valor_cents: totalLeiloes },
+      { descricao: 'Leilões', valor_cents: totalLeiloes },
       { descricao: 'Venda de lugares', valor_cents: totalLugares },
     ];
     const saidas = [
