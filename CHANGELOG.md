@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.5]
+### Fixed
+- Remove da impressão do Resumo Final os cabeçalhos e rodapés automáticos do navegador, incluindo data/hora, endereço do site e numeração das páginas.
+
 ## [1.7.4]
 ### Added
 - Acrescenta o botão para liquidar cada parcela do Orçamento e cria a respetiva despesa nos Movimentos com a data da liquidação.
