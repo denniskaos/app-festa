@@ -111,6 +111,38 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
     });
     assert.equal(createPendingLine.status, 302);
 
+    const createPluralLine = await fetch(`${baseUrl}/orcamento`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        dt: '2026-07-31',
+        descr: 'Concertinas',
+        valor: '125',
+        notas: 'Atuação tradicional',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(createPluralLine.status, 302);
+
+    const createSingularMovement = await fetch(`${baseUrl}/movimentos`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        dt: '2026-07-31',
+        type: 'despesa',
+        descr: 'Concertina',
+        valor: '125',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(createSingularMovement.status, 302);
+
     const updateAuction = await fetch(`${baseUrl}/leiloes/1`, {
       method: 'POST',
       headers: {
@@ -145,15 +177,16 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
     const budgetBeforeHtml = (await budgetBefore.text()).replace(/\s+/g, ' ');
     assert.equal(budgetBeforeHtml.includes('/orcamento/1/liquidar'), false);
     assert.ok(budgetBeforeHtml.includes('/orcamento/2/liquidar'));
+    assert.equal(budgetBeforeHtml.includes('/orcamento/3/liquidar'), false);
     assert.ok(budgetBeforeHtml.includes('Liquidado'));
     assert.ok(budgetBeforeHtml.includes('Liquidar'));
     assert.match(
       budgetBeforeHtml,
-      /Valor total<\/div> <div class="stat-number">€ 1250\.50<\/div>/,
+      /Valor total<\/div> <div class="stat-number">€ 1375\.50<\/div>/,
     );
     assert.match(
       budgetBeforeHtml,
-      /Saldo Final<\/div> <div class="stat-number">€ -200\.00<\/div>/,
+      /Saldo Final<\/div> <div class="stat-number">€ -325\.00<\/div>/,
     );
     assert.match(
       budgetBeforeHtml,
@@ -176,11 +209,11 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
     assert.equal(budgetAfterHtml.includes('/orcamento/2/liquidar'), false);
     assert.match(
       budgetAfterHtml,
-      /Valor total<\/div> <div class="stat-number">€ 1250\.50<\/div>/,
+      /Valor total<\/div> <div class="stat-number">€ 1375\.50<\/div>/,
     );
     assert.match(
       budgetAfterHtml,
-      /Saldo Final<\/div> <div class="stat-number">€ -950\.50<\/div>/,
+      /Saldo Final<\/div> <div class="stat-number">€ -1075\.50<\/div>/,
     );
     assert.match(
       budgetAfterHtml,
@@ -194,6 +227,7 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
     assert.ok(movementsHtml.includes('2026-07-30'));
     assert.ok(movementsHtml.includes('despesa'));
     assert.ok(movementsHtml.includes('Concertinas - segunda parcela'));
+    assert.ok(movementsHtml.includes('Concertina'));
     assert.ok(movementsHtml.includes('750.50'));
 
     const settleAgain = await fetch(`${baseUrl}/orcamento/2/liquidar`, {

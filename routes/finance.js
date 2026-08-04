@@ -44,13 +44,32 @@ const GENERIC_MATCH_WORDS = new Set([
   'servicos', 'um', 'uma', 'umas', 'uns',
 ]);
 
+function singularizeMatchWord(word) {
+  if (word.length <= 3) return word;
+  if (word.endsWith('oes')) return `${word.slice(0, -3)}ao`;
+  if (word.endsWith('aes')) return `${word.slice(0, -3)}ao`;
+  if (word.endsWith('ais')) return `${word.slice(0, -3)}al`;
+  if (word.endsWith('eis')) return `${word.slice(0, -3)}el`;
+  if (word.endsWith('ois')) return `${word.slice(0, -3)}ol`;
+  if (word.endsWith('uis')) return `${word.slice(0, -3)}ul`;
+  if (word.endsWith('ns')) return `${word.slice(0, -2)}m`;
+  if (word.endsWith('es') && /[rsz]es$/.test(word)) return word.slice(0, -2);
+  if (word.endsWith('s') && !word.endsWith('ss')) return word.slice(0, -1);
+  return word;
+}
+
 function normalizeMatchText(value) {
-  return String(value || '')
+  const normalized = String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+  return normalized
+    .split(' ')
+    .filter(Boolean)
+    .map(singularizeMatchWord)
+    .join(' ');
 }
 
 function meaningfulWords(value) {
