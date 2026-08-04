@@ -37,20 +37,67 @@ function todayInLisbon() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function movementMatchKey(description, valueCents) {
-  const normalizedDescription = String(description || '')
+const GENERIC_MATCH_WORDS = new Set([
+  'a', 'ao', 'aos', 'as', 'com', 'da', 'das', 'de', 'despesa', 'do', 'dos', 'e', 'em',
+  'festa', 'liquidacao', 'liquidar', 'na', 'nas', 'no', 'nos', 'o', 'orcamento', 'os',
+  'paga', 'pago', 'pagamento', 'para', 'parcela', 'parcelas', 'por', 'sem', 'servico',
+  'servicos', 'um', 'uma', 'umas', 'uns',
+]);
+
+function normalizeMatchText(value) {
+  return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-  if (!normalizedDescription) return null;
-  return `${normalizedDescription}\u0000${Number(valueCents || 0)}`;
+}
+
+function meaningfulWords(value) {
+  return normalizeMatchText(value)
+    .split(' ')
+    .filter((word) => word.length >= 2 && !GENERIC_MATCH_WORDS.has(word));
+}
+
+function movementMatchScore(line, movement) {
+  if (Number(line.valor_cents || 0) !== Number(movement.valor_cents || 0)) return -1;
+
+  const movementText = normalizeMatchText(movement.descr);
+  const lineDescription = normalizeMatchText(line.descr);
+  const lineNotes = normalizeMatchText(line.notas);
+  if (!movementText) return -1;
+
+  if (lineDescription && movementText === lineDescription) return 1000;
+  if (lineNotes && movementText === lineNotes) return 950;
+
+  for (const candidate of [lineDescription, lineNotes]) {
+    if (candidate.length < 4) continue;
+    if (movementText.includes(candidate) || candidate.includes(movementText)) {
+      return 800 + Math.min(candidate.length, movementText.length);
+    }
+  }
+
+  const lineWords = new Set([
+    ...meaningfulWords(line.descr),
+    ...meaningfulWords(line.notas),
+  ]);
+  const movementWords = new Set(meaningfulWords(movement.descr));
+  const sharedWords = [...lineWords].filter((word) => movementWords.has(word));
+  if (sharedWords.length >= 2) {
+    return 400 + sharedWords.reduce((sum, word) => sum + word.length, 0);
+  }
+  if (sharedWords.length === 1 && sharedWords[0].length >= 4) {
+    return 200 + sharedWords[0].length;
+  }
+  return -1;
 }
 
 const reconcileBudgetMovements = db.transaction(() => {
   const lines = db.prepare(`
-    SELECT id, descr, COALESCE(valor_cents, 0) AS valor_cents
+    SELECT id,
+           COALESCE(descr, '') AS descr,
+           COALESCE(notas, '') AS notas,
+           COALESCE(valor_cents, 0) AS valor_cents
     FROM orcamento_servicos
     WHERE movimento_id IS NULL
     ORDER BY id
@@ -67,26 +114,26 @@ const reconcileBudgetMovements = db.transaction(() => {
     ORDER BY COALESCE(date(m.dt), '9999-99-99'), m.id
   `).all();
 
-  const movementsByKey = new Map();
-  for (const movement of movements) {
-    const key = movementMatchKey(movement.descr, movement.valor_cents);
-    if (!key) continue;
-    const ids = movementsByKey.get(key) || [];
-    ids.push(movement.id);
-    movementsByKey.set(key, ids);
-  }
-
   const link = db.prepare(`
     UPDATE orcamento_servicos
     SET movimento_id = ?
     WHERE id = ? AND movimento_id IS NULL
   `);
   let linked = 0;
+  const usedMovementIds = new Set();
   for (const line of lines) {
-    const key = movementMatchKey(line.descr, line.valor_cents);
-    const movementIds = key ? movementsByKey.get(key) : null;
-    if (!movementIds?.length) continue;
-    const result = link.run(movementIds.shift(), line.id);
+    let bestMovement = null;
+    let bestScore = -1;
+    for (const movement of movements) {
+      if (usedMovementIds.has(movement.id)) continue;
+      const score = movementMatchScore(line, movement);
+      if (score <= bestScore) continue;
+      bestMovement = movement;
+      bestScore = score;
+    }
+    if (!bestMovement || bestScore < 0) continue;
+    const result = link.run(bestMovement.id, line.id);
+    if (result.changes) usedMovementIds.add(bestMovement.id);
     linked += result.changes;
   }
   return linked;

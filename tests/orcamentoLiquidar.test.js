@@ -71,9 +71,9 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
       },
       body: new URLSearchParams({
         dt: '2026-08-15',
-        descr: 'Bombos - parcela final',
+        descr: 'Animação musical - parcela final',
         valor: '500',
-        notas: 'Movimento já lançado manualmente',
+        notas: 'Grupo Cultural de Bombos Os Bravos',
       }).toString(),
       redirect: 'manual',
     });
@@ -88,7 +88,7 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
       body: new URLSearchParams({
         dt: '2026-07-30',
         type: 'despesa',
-        descr: 'BOMBOS — PARCELA FINAL',
+        descr: 'Pagamento aos Bravos',
         valor: '500',
       }).toString(),
       redirect: 'manual',
