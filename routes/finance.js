@@ -14,12 +14,74 @@ function getInt(sql) {
   }
 }
 
+function genericCategoryId(type) {
+  let category = db.prepare('SELECT id FROM categorias WHERE type=? AND name=?')
+    .get(type, 'Genérico');
+  if (!category) {
+    db.prepare('INSERT OR IGNORE INTO categorias (name, type, planned_cents) VALUES (?,?,0)')
+      .run('Genérico', type);
+    category = db.prepare('SELECT id FROM categorias WHERE type=? AND name=?')
+      .get(type, 'Genérico');
+  }
+  return category.id;
+}
+
+function todayInLisbon() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Lisbon',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+const settleBudgetLine = db.transaction((id) => {
+  const line = db.prepare(`
+    SELECT o.id,
+           COALESCE(o.dt, '') AS dt,
+           COALESCE(o.descr, '') AS descr,
+           COALESCE(o.valor_cents, 0) AS valor_cents,
+           o.movimento_id,
+           m.id AS movimento_existente
+    FROM orcamento_servicos o
+    LEFT JOIN movimentos m ON m.id = o.movimento_id
+    WHERE o.id = ?
+  `).get(id);
+
+  if (!line) return { status: 'not-found' };
+  if (line.movimento_existente) return { status: 'already-settled' };
+
+  if (line.movimento_id) {
+    db.prepare('UPDATE orcamento_servicos SET movimento_id=NULL WHERE id=?').run(id);
+  }
+
+  const movement = db.prepare(`
+    INSERT INTO movimentos (dt, categoria_id, descr, valor_cents)
+    VALUES (?, ?, ?, ?)
+  `).run(
+    line.dt || todayInLisbon(),
+    genericCategoryId('despesa'),
+    line.descr || 'Parcela do orçamento',
+    line.valor_cents,
+  );
+
+  db.prepare('UPDATE orcamento_servicos SET movimento_id=? WHERE id=?')
+    .run(Number(movement.lastInsertRowid), id);
+
+  return { status: 'settled', movementId: Number(movement.lastInsertRowid) };
+});
+
 /* ================= ORÇAMENTO ================= */
 router.get('/orcamento', requireAuth, (req, res, next) => {
   try {
     const linhas = db.prepare(`
-      SELECT * FROM orcamento_servicos
-      ORDER BY COALESCE(dt,'9999-99-99'), id
+      SELECT o.*,
+             CASE WHEN m.id IS NULL THEN 0 ELSE 1 END AS liquidado
+      FROM orcamento_servicos o
+      LEFT JOIN movimentos m ON m.id = o.movimento_id
+      ORDER BY COALESCE(o.dt,'9999-99-99'), o.id
     `).all();
     const total = linhas.reduce((acc, r) => acc + (r.valor_cents || 0), 0);
 
@@ -60,6 +122,8 @@ router.get('/orcamento', requireAuth, (req, res, next) => {
       total,
       saldoFinal,
       valorEmFalta,
+      msg: String(req.query.msg || '').slice(0, 240) || null,
+      err: String(req.query.err || '').slice(0, 240) || null,
       euros
     });
   } catch (e) { next(e); }
@@ -93,10 +157,41 @@ router.get('/orcamento/:id/edit', requireAuth, (req, res, next) => {
 router.post('/orcamento/:id/update', requireAuth, (req, res, next) => {
   try {
     const { dt, descr, valor, notas } = req.body;
-    db.prepare(`UPDATE orcamento_servicos SET dt=?, descr=?, valor_cents=?, notas=? WHERE id=?`)
-      .run(dt || null, descr, cents(valor || 0), notas || null, req.params.id);
+    const id = Number(req.params.id);
+    const current = db.prepare('SELECT movimento_id FROM orcamento_servicos WHERE id=?').get(id);
+    if (!current) return res.status(404).type('text').send('Serviço não encontrado');
+
+    const valorCents = cents(valor || 0);
+    const updateLine = db.transaction(() => {
+      db.prepare(`UPDATE orcamento_servicos SET dt=?, descr=?, valor_cents=?, notas=? WHERE id=?`)
+        .run(dt || null, descr, valorCents, notas || null, id);
+      if (current.movimento_id) {
+        db.prepare('UPDATE movimentos SET dt=?, descr=?, valor_cents=? WHERE id=?')
+          .run(dt || todayInLisbon(), descr || null, valorCents, current.movimento_id);
+      }
+    });
+    updateLine();
     res.redirect('/orcamento');
   } catch (e) { next(e); }
+});
+router.post('/orcamento/:id/liquidar', requireAuth, (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.redirect(303, '/orcamento?err=' + encodeURIComponent('Parcela inválida.'));
+    }
+
+    const result = settleBudgetLine(id);
+    if (result.status === 'not-found') {
+      return res.redirect(303, '/orcamento?err=' + encodeURIComponent('Parcela não encontrada.'));
+    }
+    if (result.status === 'already-settled') {
+      return res.redirect(303, '/orcamento?msg=' + encodeURIComponent('Esta parcela já está liquidada.'));
+    }
+    return res.redirect(303, '/orcamento?msg=' + encodeURIComponent(
+      'Parcela liquidada e movimento de despesa criado.',
+    ));
+  } catch (e) { return next(e); }
 });
 router.post('/orcamento/:id/delete', requireAuth, (req, res, next) => {
   try {
@@ -135,16 +230,8 @@ router.post('/movimentos', requireAuth, (req, res, next) => {
   try {
     const { dt, type, descr, valor } = req.body;
 
-    // garante a categoria "Genérico" do tipo certo
-    let cat = db.prepare('SELECT id FROM categorias WHERE type=? AND name=?').get(type, 'Genérico');
-    if (!cat) {
-      db.prepare('INSERT OR IGNORE INTO categorias (name, type, planned_cents) VALUES (?,?,0)')
-        .run('Genérico', type);
-      cat = db.prepare('SELECT id FROM categorias WHERE type=? AND name=?').get(type, 'Genérico');
-    }
-
     db.prepare('INSERT INTO movimentos (dt, categoria_id, descr, valor_cents) VALUES (?,?,?,?)')
-      .run(dt || null, cat.id, descr || null, cents(valor || 0));
+      .run(dt || null, genericCategoryId(type), descr || null, cents(valor || 0));
     res.redirect('/movimentos');
   } catch (e) { next(e); }
 });
@@ -166,22 +253,20 @@ router.post('/movimentos/:id', requireAuth, (req, res, next) => {
   try {
     const { dt, type, descr, valor } = req.body;
 
-    let cat = db.prepare('SELECT id FROM categorias WHERE type=? AND name=?').get(type, 'Genérico');
-    if (!cat) {
-      db.prepare('INSERT OR IGNORE INTO categorias (name, type, planned_cents) VALUES (?,?,0)')
-        .run('Genérico', type);
-      cat = db.prepare('SELECT id FROM categorias WHERE type=? AND name=?').get(type, 'Genérico');
-    }
-
     db.prepare('UPDATE movimentos SET dt=?, categoria_id=?, descr=?, valor_cents=? WHERE id=?')
-      .run(dt || null, cat.id, descr || null, cents(valor || 0), req.params.id);
+      .run(dt || null, genericCategoryId(type), descr || null, cents(valor || 0), req.params.id);
     res.redirect('/movimentos');
   } catch (e) { next(e); }
 });
 
 router.post('/movimentos/:id/delete', requireAuth, (req, res, next) => {
   try {
-    db.prepare('DELETE FROM movimentos WHERE id=?').run(req.params.id);
+    const removeMovement = db.transaction(() => {
+      db.prepare('UPDATE orcamento_servicos SET movimento_id=NULL WHERE movimento_id=?')
+        .run(req.params.id);
+      db.prepare('DELETE FROM movimentos WHERE id=?').run(req.params.id);
+    });
+    removeMovement();
     res.redirect('/movimentos');
   } catch (e) { next(e); }
 });
