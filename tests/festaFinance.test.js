@@ -181,6 +181,38 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     });
     assert.equal(createCavalosExpense.status, 302);
 
+    const createConcertinasExpense = await fetch(`${baseUrl}/movimentos`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        dt: '2026-08-02',
+        type: 'despesa',
+        descr: 'Concertinas',
+        valor: '210,50',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(createConcertinasExpense.status, 302);
+
+    const createObrasBarReceipt = await fetch(`${baseUrl}/movimentos`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        dt: '2026-08-02',
+        type: 'receita',
+        descr: 'Obras Bar',
+        valor: '432,10',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(createObrasBarReceipt.status, 302);
+
     const resumo = await fetch(`${baseUrl}/resumo-final?inicio=2026-01-01&fim=2026-12-31&destino=Pr%C3%B3xima+comiss%C3%A3o`, {
       headers: { cookie },
     });
@@ -188,11 +220,15 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     const resumoHtml = await resumo.text();
     assert.ok(resumoHtml.includes('RESUMO FINAL DE CONTAS'));
     assert.ok(resumoHtml.includes('Peditórios'));
+    assert.ok(resumoHtml.includes('Obras Bar'));
+    assert.ok(resumoHtml.includes('432,10'));
     assert.ok(resumoHtml.includes('Sábado Bombos'));
     assert.ok(resumoHtml.includes('Rifas/Malhas'));
     assert.ok(resumoHtml.includes('Leilões'));
     assert.ok(resumoHtml.includes('Venda de lugares'));
     assert.ok(resumoHtml.includes('Jantares/Almoços Artistas e Som'));
+    assert.ok(resumoHtml.includes('Concertinas'));
+    assert.ok(resumoHtml.includes('210,50'));
     assert.ok(resumoHtml.includes('Palco + Gerador + Vigilante'));
     assert.ok(resumoHtml.includes('Fogo de artifício'));
     assert.ok(resumoHtml.includes('Banda de Música'));
@@ -200,7 +236,7 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(resumoHtml.includes('321,45'));
     assert.ok(resumoHtml.includes('Procissão'));
     assert.ok(resumoHtml.includes('373,45'));
-    assert.ok(resumoHtml.includes('413,45'));
+    assert.ok(resumoHtml.includes('845,55'));
     assert.ok(resumoHtml.includes('Próxima comissão'));
 
     const peditorios = [

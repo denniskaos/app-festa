@@ -99,6 +99,7 @@ function receiptKey(row) {
   const text = rowText(row);
   if (text.includes('sabado') && text.includes('bombo')) return 'sabadoBombos';
   if (text.includes('rifa') || text.includes('malha')) return 'rifasMalhas';
+  if (text.includes('obra') && hasWord(text, 'bar')) return 'obrasBar';
   return 'bar';
 }
 
@@ -128,7 +129,8 @@ function expenseKey(row) {
   ) return 'estadias';
   if (artistRelated) return 'artistas';
   if (/\bdj\b/.test(text) || text.includes('djs')) return 'djs';
-  if (text.includes('bombo') || text.includes('concertina')) return 'bombos';
+  if (text.includes('bombo')) return 'bombos';
+  if (text.includes('concertina')) return 'concertinas';
   if (text.includes('iluminacao')) return 'iluminacao';
   if (text.includes('banda')) return 'bandaMusica';
   if (text.includes('rancho')) return 'ranchos';
@@ -165,6 +167,7 @@ router.get('/resumo-final', requireAuth, requireRole('admin'), (req, res, next) 
       { descricao: 'Peditórios', valor_cents: totalPeditorios },
       { descricao: 'Patrocínios', valor_cents: totalPatrocinadores },
       { descricao: 'Bar', valor_cents: receitas.bar || 0 },
+      { descricao: 'Obras Bar', valor_cents: receitas.obrasBar || 0 },
       { descricao: 'Sábado Bombos', valor_cents: receitas.sabadoBombos || 0 },
       { descricao: 'Rifas/Malhas', valor_cents: receitas.rifasMalhas || 0 },
       { descricao: 'Leilões', valor_cents: totalLeiloes },
@@ -175,6 +178,7 @@ router.get('/resumo-final', requireAuth, requireRole('admin'), (req, res, next) 
       { descricao: 'DJs', valor_cents: despesasMovimentos.djs || 0 },
       { descricao: 'Jantares/Almoços Artistas e Som', valor_cents: despesasMovimentos.jantares || 0 },
       { descricao: 'Bombos', valor_cents: despesasMovimentos.bombos || 0 },
+      { descricao: 'Concertinas', valor_cents: despesasMovimentos.concertinas || 0 },
       { descricao: 'Som de Rua', valor_cents: despesasMovimentos.somRua || 0 },
       { descricao: 'Som + Luz', valor_cents: despesasMovimentos.somLuz || 0 },
       { descricao: 'Palco + Gerador + Vigilante', valor_cents: despesasMovimentos.palco || 0 },
