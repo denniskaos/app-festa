@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.4]
+### Added
+- Acrescenta o botão para liquidar cada parcela do Orçamento e cria a respetiva despesa nos Movimentos com a data da liquidação.
+- Acrescenta “Concertinas” às despesas e “Obras Bar” às receitas do Resumo Final.
+
+### Fixed
+- Reconhece parcelas já liquidadas através do valor, da descrição e das notas, incluindo correspondências no singular e no plural.
+- Corrige o Valor total, o Saldo Final e o Saldo em falta apresentados no Orçamento.
+- Inclui as refeições de Seabra, Pessoal do Som, Canário, Némanus, Saúl e Bombos em “Jantares/Almoços Artistas e Som”.
+
 ## [1.7.3]
 ### Added
 - Acrescenta o “Leilão da Mota” à página de Leilões e inclui o respetivo valor na receita “Leilões” do Resumo Final.
