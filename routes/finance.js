@@ -37,6 +37,61 @@ function todayInLisbon() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function movementMatchKey(description, valueCents) {
+  const normalizedDescription = String(description || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  if (!normalizedDescription) return null;
+  return `${normalizedDescription}\u0000${Number(valueCents || 0)}`;
+}
+
+const reconcileBudgetMovements = db.transaction(() => {
+  const lines = db.prepare(`
+    SELECT id, descr, COALESCE(valor_cents, 0) AS valor_cents
+    FROM orcamento_servicos
+    WHERE movimento_id IS NULL
+    ORDER BY id
+  `).all();
+  if (!lines.length) return 0;
+
+  const movements = db.prepare(`
+    SELECT m.id, m.descr, COALESCE(m.valor_cents, 0) AS valor_cents
+    FROM movimentos m
+    JOIN categorias c ON c.id = m.categoria_id
+    LEFT JOIN orcamento_servicos o ON o.movimento_id = m.id
+    WHERE c.type = 'despesa'
+      AND o.id IS NULL
+    ORDER BY COALESCE(date(m.dt), '9999-99-99'), m.id
+  `).all();
+
+  const movementsByKey = new Map();
+  for (const movement of movements) {
+    const key = movementMatchKey(movement.descr, movement.valor_cents);
+    if (!key) continue;
+    const ids = movementsByKey.get(key) || [];
+    ids.push(movement.id);
+    movementsByKey.set(key, ids);
+  }
+
+  const link = db.prepare(`
+    UPDATE orcamento_servicos
+    SET movimento_id = ?
+    WHERE id = ? AND movimento_id IS NULL
+  `);
+  let linked = 0;
+  for (const line of lines) {
+    const key = movementMatchKey(line.descr, line.valor_cents);
+    const movementIds = key ? movementsByKey.get(key) : null;
+    if (!movementIds?.length) continue;
+    const result = link.run(movementIds.shift(), line.id);
+    linked += result.changes;
+  }
+  return linked;
+});
+
 const settleBudgetLine = db.transaction((id) => {
   const line = db.prepare(`
     SELECT o.id,
@@ -61,7 +116,7 @@ const settleBudgetLine = db.transaction((id) => {
     INSERT INTO movimentos (dt, categoria_id, descr, valor_cents)
     VALUES (?, ?, ?, ?)
   `).run(
-    line.dt || todayInLisbon(),
+    todayInLisbon(),
     genericCategoryId('despesa'),
     line.descr || 'Parcela do orçamento',
     line.valor_cents,
@@ -76,6 +131,7 @@ const settleBudgetLine = db.transaction((id) => {
 /* ================= ORÇAMENTO ================= */
 router.get('/orcamento', requireAuth, (req, res, next) => {
   try {
+    reconcileBudgetMovements();
     const linhas = db.prepare(`
       SELECT o.*,
              CASE WHEN m.id IS NULL THEN 0 ELSE 1 END AS liquidado
@@ -166,8 +222,8 @@ router.post('/orcamento/:id/update', requireAuth, (req, res, next) => {
       db.prepare(`UPDATE orcamento_servicos SET dt=?, descr=?, valor_cents=?, notas=? WHERE id=?`)
         .run(dt || null, descr, valorCents, notas || null, id);
       if (current.movimento_id) {
-        db.prepare('UPDATE movimentos SET dt=?, descr=?, valor_cents=? WHERE id=?')
-          .run(dt || todayInLisbon(), descr || null, valorCents, current.movimento_id);
+        db.prepare('UPDATE movimentos SET descr=?, valor_cents=? WHERE id=?')
+          .run(descr || null, valorCents, current.movimento_id);
       }
     });
     updateLine();
@@ -181,6 +237,7 @@ router.post('/orcamento/:id/liquidar', requireAuth, (req, res, next) => {
       return res.redirect(303, '/orcamento?err=' + encodeURIComponent('Parcela inválida.'));
     }
 
+    reconcileBudgetMovements();
     const result = settleBudgetLine(id);
     if (result.status === 'not-found') {
       return res.redirect(303, '/orcamento?err=' + encodeURIComponent('Parcela não encontrada.'));

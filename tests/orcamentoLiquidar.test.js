@@ -7,6 +7,17 @@ import path from 'node:path';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function todayInLisbon() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Lisbon',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 async function waitForHealth(baseUrl, maxMs = 15000) {
   const startedAt = Date.now();
   while ((Date.now() - startedAt) < maxMs) {
@@ -19,7 +30,7 @@ async function waitForHealth(baseUrl, maxMs = 15000) {
   throw new Error(`Server did not become healthy within ${maxMs}ms`);
 }
 
-test('liquidar uma parcela do orçamento cria uma única despesa nos movimentos', async () => {
+test('reconhece despesas existentes e usa a data da liquidação em novos movimentos', async () => {
   const port = String(5000 + Math.floor(Math.random() * 200));
   const baseUrl = `http://127.0.0.1:${port}`;
   const testDir = await mkdtemp(path.join(tmpdir(), 'festa-orcamento-'));
@@ -52,28 +63,62 @@ test('liquidar uma parcela do orçamento cria uma única despesa nos movimentos'
     assert.equal(register.status, 302);
     const cookie = register.headers.get('set-cookie') || '';
 
-    const createLine = await fetch(`${baseUrl}/orcamento`, {
+    const createExistingLine = await fetch(`${baseUrl}/orcamento`, {
       method: 'POST',
       headers: {
         cookie,
         'content-type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        dt: '2026-08-04',
+        dt: '2026-08-15',
+        descr: 'Bombos - parcela final',
+        valor: '500',
+        notas: 'Movimento já lançado manualmente',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(createExistingLine.status, 302);
+
+    const createExistingMovement = await fetch(`${baseUrl}/movimentos`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        dt: '2026-07-30',
+        type: 'despesa',
+        descr: 'BOMBOS — PARCELA FINAL',
+        valor: '500',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(createExistingMovement.status, 302);
+
+    const createPendingLine = await fetch(`${baseUrl}/orcamento`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        dt: '2026-07-01',
         descr: 'Concertinas - segunda parcela',
         valor: '750,50',
         notas: 'Liquidar depois da festa',
       }).toString(),
       redirect: 'manual',
     });
-    assert.equal(createLine.status, 302);
+    assert.equal(createPendingLine.status, 302);
 
     const budgetBefore = await fetch(`${baseUrl}/orcamento`, { headers: { cookie } });
     const budgetBeforeHtml = await budgetBefore.text();
-    assert.ok(budgetBeforeHtml.includes('/orcamento/1/liquidar'));
+    assert.equal(budgetBeforeHtml.includes('/orcamento/1/liquidar'), false);
+    assert.ok(budgetBeforeHtml.includes('/orcamento/2/liquidar'));
+    assert.ok(budgetBeforeHtml.includes('Liquidado'));
     assert.ok(budgetBeforeHtml.includes('Liquidar'));
 
-    const settle = await fetch(`${baseUrl}/orcamento/1/liquidar`, {
+    const settle = await fetch(`${baseUrl}/orcamento/2/liquidar`, {
       method: 'POST',
       headers: { cookie },
       redirect: 'manual',
@@ -86,16 +131,18 @@ test('liquidar uma parcela do orçamento cria uma única despesa nos movimentos'
     const budgetAfter = await fetch(`${baseUrl}/orcamento`, { headers: { cookie } });
     const budgetAfterHtml = await budgetAfter.text();
     assert.ok(budgetAfterHtml.includes('Liquidado'));
-    assert.equal(budgetAfterHtml.includes('/orcamento/1/liquidar'), false);
+    assert.equal(budgetAfterHtml.includes('/orcamento/2/liquidar'), false);
 
     const movements = await fetch(`${baseUrl}/movimentos`, { headers: { cookie } });
     const movementsHtml = await movements.text();
-    assert.ok(movementsHtml.includes('2026-08-04'));
+    assert.ok(movementsHtml.includes(todayInLisbon()));
+    assert.equal(movementsHtml.includes('2026-07-01'), false);
+    assert.ok(movementsHtml.includes('2026-07-30'));
     assert.ok(movementsHtml.includes('despesa'));
     assert.ok(movementsHtml.includes('Concertinas - segunda parcela'));
     assert.ok(movementsHtml.includes('750.50'));
 
-    const settleAgain = await fetch(`${baseUrl}/orcamento/1/liquidar`, {
+    const settleAgain = await fetch(`${baseUrl}/orcamento/2/liquidar`, {
       method: 'POST',
       headers: { cookie },
       redirect: 'manual',
@@ -123,7 +170,7 @@ test('liquidar uma parcela do orçamento cria uma única despesa nos movimentos'
 
     const budgetReopened = await fetch(`${baseUrl}/orcamento`, { headers: { cookie } });
     const budgetReopenedHtml = await budgetReopened.text();
-    assert.ok(budgetReopenedHtml.includes('/orcamento/1/liquidar'));
+    assert.ok(budgetReopenedHtml.includes('/orcamento/2/liquidar'));
   } finally {
     child.kill('SIGTERM');
     await sleep(300);
