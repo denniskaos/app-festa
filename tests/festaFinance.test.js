@@ -213,11 +213,39 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     });
     assert.equal(createObrasBarReceipt.status, 302);
 
+    const mealExpenses = [
+      ['Alimentação Seabra', '10'],
+      ['Alimentação Pessoal do Som', '20'],
+      ['Jantar Canário', '30'],
+      ['Jantar Némanus', '40'],
+      ['Almoço Némanus', '50'],
+      ['Jantar Saúl', '60'],
+      ['Almoço dos Bombos', '70'],
+    ];
+    for (const [descr, valor] of mealExpenses) {
+      const createMealExpense = await fetch(`${baseUrl}/movimentos`, {
+        method: 'POST',
+        headers: {
+          cookie,
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          dt: '2026-08-02',
+          type: 'despesa',
+          descr,
+          valor,
+        }).toString(),
+        redirect: 'manual',
+      });
+      assert.equal(createMealExpense.status, 302);
+    }
+
     const resumo = await fetch(`${baseUrl}/resumo-final?inicio=2026-01-01&fim=2026-12-31&destino=Pr%C3%B3xima+comiss%C3%A3o`, {
       headers: { cookie },
     });
     assert.equal(resumo.status, 200);
     const resumoHtml = await resumo.text();
+    const resumoHtmlNormalizado = resumoHtml.replace(/\s+/g, ' ');
     assert.ok(resumoHtml.includes('RESUMO FINAL DE CONTAS'));
     assert.ok(resumoHtml.includes('Peditórios'));
     assert.ok(resumoHtml.includes('Obras Bar'));
@@ -227,6 +255,10 @@ test('leilões e venda de lugares: registo, totais e validações', async () => 
     assert.ok(resumoHtml.includes('Leilões'));
     assert.ok(resumoHtml.includes('Venda de lugares'));
     assert.ok(resumoHtml.includes('Jantares/Almoços Artistas e Som'));
+    assert.match(
+      resumoHtmlNormalizado,
+      /Jantares\/Almoços Artistas e Som<\/td><td>280,00 €<\/td>/,
+    );
     assert.ok(resumoHtml.includes('Concertinas'));
     assert.ok(resumoHtml.includes('210,50'));
     assert.ok(resumoHtml.includes('Palco + Gerador + Vigilante'));
