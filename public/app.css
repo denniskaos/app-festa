@@ -171,11 +171,22 @@ body.menu-open{overflow:hidden;}
 }
 
 @media print{
-  @page{size:A4;margin:14mm}
-  body{background:#fff;font-family:Arial,sans-serif;font-size:10.5pt;line-height:1.35}
+  /* A margem zero impede o navegador de acrescentar data, URL e paginação. */
+  @page{size:A4;margin:0}
+  html,body{height:auto}
+  body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif;font-size:10.5pt;line-height:1.35}
   .topbar,.footer,.no-print{display:none!important}
   main.container,main.page{max-width:none!important;margin:0!important;padding:0!important}
-  .final-report{max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none}
+  .final-report{
+    max-width:none;
+    margin:0;
+    padding:14mm;
+    border:0;
+    border-radius:0;
+    box-shadow:none;
+    -webkit-box-decoration-break:clone;
+    box-decoration-break:clone;
+  }
   .final-report-header{margin-top:0}
   .report-section,.report-table tr,.report-signatures{break-inside:avoid;page-break-inside:avoid}
   .report-section h2{break-after:avoid;page-break-after:avoid}
