@@ -49,7 +49,9 @@ const migrate = db.transaction(() => {
       dt TEXT,
       descr TEXT NOT NULL,
       valor_cents INTEGER NOT NULL DEFAULT 0,
-      notas TEXT
+      notas TEXT,
+      movimento_id INTEGER,
+      FOREIGN KEY (movimento_id) REFERENCES movimentos(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS peditorios (
@@ -157,6 +159,19 @@ const migrate = db.transaction(() => {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_password_reset_requests_status ON password_reset_requests(status, requested_at);`);
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_requests_pending_user ON password_reset_requests(user_id) WHERE status='pending';`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_vendas_lugares_nome ON vendas_lugares(nome COLLATE NOCASE);`);
+
+  const orcamentoCols = columnsOf('orcamento_servicos');
+  if (!orcamentoCols.includes('movimento_id')) {
+    db.exec(`
+      ALTER TABLE orcamento_servicos
+      ADD COLUMN movimento_id INTEGER REFERENCES movimentos(id) ON DELETE SET NULL
+    `);
+  }
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_orcamento_movimento
+    ON orcamento_servicos(movimento_id)
+    WHERE movimento_id IS NOT NULL
+  `);
 
   // A tabela antiga aceitava apenas os leilões 1 a 3. Recria-a sem perder
   // valores para acrescentar o Leilão da Mota como quarto registo fixo.

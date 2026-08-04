@@ -349,7 +349,9 @@ try {
         dt TEXT,
         descr TEXT NOT NULL,
         valor_cents INTEGER NOT NULL DEFAULT 0,
-        notas TEXT
+        notas TEXT,
+        movimento_id INTEGER,
+        FOREIGN KEY (movimento_id) REFERENCES movimentos(id) ON DELETE SET NULL
       );
 
       /* Peditórios */

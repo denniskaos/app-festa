@@ -3,6 +3,9 @@
   <a class="btn" style="margin-left:auto" href="/orcamento/new">Novo</a>
 </div>
 
+<% if (err) { %><div class="alert"><%= err %></div><% } %>
+<% if (msg) { %><div class="alert success"><%= msg %></div><% } %>
+
 <div class="cards" style="margin-bottom:12px;">
   <div class="card stat">
     <div class="stat-label">Total do Orçamento</div>
@@ -41,6 +44,15 @@
         <td>€ <%= (r.valor_cents/100).toFixed(2) %></td>
         <td><%= r.notas || '—' %></td>
         <td class="actions">
+          <% if (r.liquidado) { %>
+            <span class="badge">Liquidado</span>
+          <% } else { %>
+            <form method="post" action="/orcamento/<%= r.id %>/liquidar" style="display:inline" onsubmit="return confirm('Liquidar esta parcela e criar a despesa nos Movimentos?')">
+              <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
+              <button class="btn" type="submit">Liquidar</button>
+            </form>
+          <% } %>
+
           <a class="btn btn-light" href="/orcamento/<%= r.id %>/edit">Editar</a>
 
           <form method="post" action="/orcamento/<%= r.id %>/delete" style="display:inline" onsubmit="return confirm('Apagar este serviço?')">
