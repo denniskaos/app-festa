@@ -259,6 +259,59 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
     const budgetReopened = await fetch(`${baseUrl}/orcamento`, { headers: { cookie } });
     const budgetReopenedHtml = await budgetReopened.text();
     assert.ok(budgetReopenedHtml.includes('/orcamento/2/liquidar'));
+
+    const mealExpenses = [
+      ['Alimentação Seabra', '10'],
+      ['Alimentação Pessoal do Som', '20'],
+      ['Jantar Canário', '30'],
+      ['Jantar Némanus', '40'],
+      ['Almoço Némanus', '50'],
+      ['Jantar Saúl', '60'],
+      ['Almoço dos Bombos', '70'],
+    ];
+    for (const [index, [descr, valor]] of mealExpenses.entries()) {
+      const createMealBudgetLine = await fetch(`${baseUrl}/orcamento`, {
+        method: 'POST',
+        headers: {
+          cookie,
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          dt: '2026-08-02',
+          descr: 'Jantares/Almoços Artistas e Som',
+          valor,
+          notas: descr,
+        }).toString(),
+        redirect: 'manual',
+      });
+      assert.equal(createMealBudgetLine.status, 302);
+
+      const createMealMovement = await fetch(`${baseUrl}/movimentos`, {
+        method: 'POST',
+        headers: {
+          cookie,
+          'content-type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          dt: '2026-08-02',
+          type: 'despesa',
+          descr,
+          valor,
+        }).toString(),
+        redirect: 'manual',
+      });
+      assert.equal(createMealMovement.status, 302, `movimento ${index + 1}`);
+    }
+
+    const mealBudget = await fetch(`${baseUrl}/orcamento`, { headers: { cookie } });
+    const mealBudgetHtml = (await mealBudget.text()).replace(/\s+/g, ' ');
+    for (let id = 4; id <= 10; id += 1) {
+      assert.equal(mealBudgetHtml.includes(`/orcamento/${id}/liquidar`), false);
+    }
+    assert.equal(
+      mealBudgetHtml.match(/<span class="badge">Liquidado<\/span>/g)?.length,
+      9,
+    );
   } finally {
     child.kill('SIGTERM');
     await sleep(300);

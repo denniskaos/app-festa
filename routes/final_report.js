@@ -106,19 +106,20 @@ function receiptKey(row) {
 function expenseKey(row) {
   const text = normalize(`${row.categoria || ''} ${row.descricao || ''} ${row.descr || ''} ${row.notas || ''}`);
   const artistRelated = hasAnyWord(text, ['artista', 'artistas', 'nemanus', 'canario', 'saul', 'seabra']);
+  const mealRelated = hasAnyWord(text, ['alimentacao', 'jantar', 'jantares', 'almoco', 'almocos', 'refeicao', 'refeicoes']);
   if (
     text.includes('vitor marinho')
     || text.includes('fogo artificio')
     || text.includes('fogo de artificio')
     || text.includes('pirotecnia')
   ) return 'fogoArtificio';
+  if (
+    mealRelated
+    && (artistRelated || hasWord(text, 'som') || hasAnyWord(text, ['bombo', 'bombos']))
+  ) return 'jantares';
   if (text.includes('palco') || text.includes('gerador') || text.includes('vigilante')) return 'palco';
   if (text.includes('pedro artisom') || text.includes('artisom') || (text.includes('som') && text.includes('rua'))) return 'somRua';
   if (text.includes('som') && (text.includes('luz') || text.includes('iluminacao'))) return 'somLuz';
-  if (
-    (text.includes('jantar') || text.includes('almoco') || text.includes('refeicao'))
-    && (artistRelated || hasWord(text, 'som'))
-  ) return 'jantares';
   if (text.includes('camarim') || text.includes('camarin')) return 'camarins';
   if (
     text.includes('estadia')
