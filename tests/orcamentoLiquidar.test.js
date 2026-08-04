@@ -111,12 +111,54 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
     });
     assert.equal(createPendingLine.status, 302);
 
+    const updateAuction = await fetch(`${baseUrl}/leiloes/1`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        dt: '2026-07-30',
+        valor_recebido: '200',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(updateAuction.status, 302);
+
+    const createSeatSale = await fetch(`${baseUrl}/lugares`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        nome: 'Comprador do orçamento',
+        lugar: 'Lugar Orçamento 1',
+        valor_total: '100',
+        valor_pago: '100',
+      }).toString(),
+      redirect: 'manual',
+    });
+    assert.equal(createSeatSale.status, 302);
+
     const budgetBefore = await fetch(`${baseUrl}/orcamento`, { headers: { cookie } });
-    const budgetBeforeHtml = await budgetBefore.text();
+    const budgetBeforeHtml = (await budgetBefore.text()).replace(/\s+/g, ' ');
     assert.equal(budgetBeforeHtml.includes('/orcamento/1/liquidar'), false);
     assert.ok(budgetBeforeHtml.includes('/orcamento/2/liquidar'));
     assert.ok(budgetBeforeHtml.includes('Liquidado'));
     assert.ok(budgetBeforeHtml.includes('Liquidar'));
+    assert.match(
+      budgetBeforeHtml,
+      /Valor total<\/div> <div class="stat-number">€ 1250\.50<\/div>/,
+    );
+    assert.match(
+      budgetBeforeHtml,
+      /Saldo Final<\/div> <div class="stat-number">€ -200\.00<\/div>/,
+    );
+    assert.match(
+      budgetBeforeHtml,
+      /Saldo em falta<\/div> <div class="stat-number">€ 750\.50<\/div>/,
+    );
 
     const settle = await fetch(`${baseUrl}/orcamento/2/liquidar`, {
       method: 'POST',
@@ -129,9 +171,21 @@ test('reconhece despesas existentes e usa a data da liquidação em novos movime
     ));
 
     const budgetAfter = await fetch(`${baseUrl}/orcamento`, { headers: { cookie } });
-    const budgetAfterHtml = await budgetAfter.text();
+    const budgetAfterHtml = (await budgetAfter.text()).replace(/\s+/g, ' ');
     assert.ok(budgetAfterHtml.includes('Liquidado'));
     assert.equal(budgetAfterHtml.includes('/orcamento/2/liquidar'), false);
+    assert.match(
+      budgetAfterHtml,
+      /Valor total<\/div> <div class="stat-number">€ 1250\.50<\/div>/,
+    );
+    assert.match(
+      budgetAfterHtml,
+      /Saldo Final<\/div> <div class="stat-number">€ -950\.50<\/div>/,
+    );
+    assert.match(
+      budgetAfterHtml,
+      /Saldo em falta<\/div> <div class="stat-number">€ 0\.00<\/div>/,
+    );
 
     const movements = await fetch(`${baseUrl}/movimentos`, { headers: { cookie } });
     const movementsHtml = await movements.text();

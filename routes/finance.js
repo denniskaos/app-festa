@@ -140,6 +140,10 @@ router.get('/orcamento', requireAuth, (req, res, next) => {
       ORDER BY COALESCE(o.dt,'9999-99-99'), o.id
     `).all();
     const total = linhas.reduce((acc, r) => acc + (r.valor_cents || 0), 0);
+    const totalLiquidado = linhas.reduce(
+      (acc, r) => acc + (r.liquidado ? (r.valor_cents || 0) : 0),
+      0,
+    );
 
     const sumRec = getInt(`
       SELECT COALESCE(SUM(m.valor_cents),0) AS n
@@ -168,8 +172,21 @@ router.get('/orcamento', requireAuth, (req, res, next) => {
       ),0) AS n
       FROM peditorios
     `);
-    const saldoFinal = totalPatrocinadores + totalPeditorios + saldoMov;
-    const valorEmFalta = total - saldoFinal;
+    const totalLeiloes = getInt(`
+      SELECT COALESCE(SUM(valor_recebido_cents), 0) AS n
+      FROM leiloes
+      WHERE numero BETWEEN 1 AND 4
+    `);
+    const totalLugaresPago = getInt(`
+      SELECT COALESCE(SUM(valor_pago_cents), 0) AS n
+      FROM vendas_lugares
+    `);
+    const saldoFinal = totalPatrocinadores
+      + totalPeditorios
+      + totalLeiloes
+      + totalLugaresPago
+      + saldoMov;
+    const saldoEmFalta = Math.max(total - totalLiquidado, 0);
 
     res.render('orcamento', {
       title:'Orçamento',
@@ -177,7 +194,7 @@ router.get('/orcamento', requireAuth, (req, res, next) => {
       linhas,
       total,
       saldoFinal,
-      valorEmFalta,
+      saldoEmFalta,
       msg: String(req.query.msg || '').slice(0, 240) || null,
       err: String(req.query.err || '').slice(0, 240) || null,
       euros
